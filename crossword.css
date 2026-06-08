@@ -63,16 +63,15 @@
 .film-grain {
   display: none;
   position: fixed;
-  top: -50%;
-  left: -50%;
-  right: -50%;
-  bottom: -50%;
-  width: 200%;
-  height: 200%;
-  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3%3Cfilter id='noise'%3%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='3' stitchTiles='stitch'/%3%3C/filter%3%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.08'/%3%3C/svg%3%3E");
+  top: -5%;
+  left: -5%;
+  width: 110%;
+  height: 110%;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3%3Cfilter id='noise'%3%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='1' stitchTiles='stitch'/%3%3C/filter%3%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.08'/%3%3C/svg%3%3E");
   animation: grainShift 0.15s steps(4) infinite;
   pointer-events: none;
   z-index: 999;
+  will-change: transform;
 }
 
 body.crossword-mode-active .film-grain {
@@ -105,6 +104,7 @@ body.crossword-mode-active .film-grain {
   pointer-events: none;
   z-index: 10;
   animation: ambientLampFlicker 8s infinite alternate;
+  will-change: opacity;
 }
 
 body.crossword-mode-active .desk-light {
@@ -112,15 +112,15 @@ body.crossword-mode-active .desk-light {
 }
 
 @keyframes ambientLampFlicker {
-  0% { opacity: 0.98; background-size: 100% 100%; }
+  0% { opacity: 0.98; }
   20% { opacity: 1; }
   20.2% { opacity: 0.96; }
   20.4% { opacity: 1; }
-  45% { opacity: 0.99; background-size: 101% 101%; }
+  45% { opacity: 0.99; }
   85% { opacity: 0.97; }
   85.2% { opacity: 0.95; }
   85.4% { opacity: 0.98; }
-  100% { opacity: 1; background-size: 100% 100%; }
+  100% { opacity: 1; }
 }
 
 /* Detective Desk Workspace Container */
@@ -768,6 +768,8 @@ body.crossword-mode-active .desk-light {
   display: flex;
   align-items: flex-start;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  position: relative;
+  overflow: hidden;
 }
 .clue-item:last-child {
   margin-bottom: 0;
@@ -800,19 +802,30 @@ body.crossword-mode-active .desk-light {
   transform: translateX(6px);
 }
 
+.clue-item::after {
+  content: '';
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  top: 50%;
+  height: 2px;
+  background: rgba(168, 45, 45, 0.85);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
+  pointer-events: none;
+}
+
+.clue-item.clue-solved::after {
+  transform: scaleX(1);
+}
+
 /* Solved clue state */
 .clue-item.clue-solved {
   color: #5d5045;
   opacity: 0.55;
   background-color: rgba(0, 0, 0, 0.03);
   border-left-color: rgba(0, 0, 0, 0.2);
-  background-image: linear-gradient(
-    transparent 47%,
-    rgba(168, 45, 45, 0.7) 48%,
-    rgba(168, 45, 45, 0.85) 50%,
-    rgba(168, 45, 45, 0.7) 52%,
-    transparent 53%
-  );
   text-decoration: none;
 }
 

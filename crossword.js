@@ -230,12 +230,20 @@ function setupEventListeners() {
     input.addEventListener("input", handleInput);
 
     // Toggle direction at intersections
+    let wasFocusedBeforeClick = false;
+    input.addEventListener("mousedown", (e) => {
+      wasFocusedBeforeClick = (document.activeElement === e.target);
+    });
+    input.addEventListener("pointerdown", (e) => {
+      wasFocusedBeforeClick = (document.activeElement === e.target);
+    });
+
     input.addEventListener("click", (e) => {
       const row = parseInt(e.target.dataset.row);
       const col = parseInt(e.target.dataset.col);
       const cellData = cellStateMap[`${row}_${col}`];
 
-      if (cellData.words.length > 1) {
+      if (wasFocusedBeforeClick && cellData.words.length > 1) {
         activeDirection = activeDirection === "H" ? "V" : "H";
         highlightWord(row, col, activeDirection);
         playFocusSound();

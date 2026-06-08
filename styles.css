@@ -559,14 +559,16 @@ body {
 /* Window rain drip animation inside Room 3 */
 .window-rain-overlay {
     position: absolute;
-    top: 0; left: 0; width: 100%; height: 100%;
+    top: -100px; left: 0; width: 100%; height: calc(100% + 100px);
     background-image: radial-gradient(circle at 10% 20%, rgba(255,255,255,0.15) 1px, transparent 2px), radial-gradient(circle at 50% 60%, rgba(255,255,255,0.12) 1.5px, transparent 2.5px);
     background-size: 80px 100px;
     animation: windowRain 4s infinite linear;
+    will-change: transform;
 }
 
 @keyframes windowRain {
-    to { background-position: 15px 200px; }
+    from { transform: translateY(0); }
+    to { transform: translateY(100px); }
 }
 
 /* Window plant pot */
