@@ -158,13 +158,47 @@
             </div>
             <button id="btn-clear" class="btn-danger">Clear All Scores</button>
         </div>
+
+        <!-- Leaderboard Tabs -->
+        <div class="admin-tabs" style="display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 15px;">
+            <button id="tab-btn-rooms" class="tab-button active">Part 1: Bedroom Placements</button>
+            <button id="tab-btn-crossword" class="tab-button">Part 2: Memory Crossword</button>
+        </div>
+
         <div class="score-list" id="score-list">
             <!-- Populated via JS -->
         </div>
     </div>
 
+    <style>
+        .tab-button {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            padding: 10px 20px;
+            color: #8e8e93;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: inherit;
+            font-weight: bold;
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+        .tab-button:hover {
+            color: white;
+            background: rgba(255,255,255,0.1);
+        }
+        .tab-button.active {
+            background: #ffd166 !important;
+            color: #050508 !important;
+            border-color: #ffd166;
+            box-shadow: 0 4px 12px rgba(255,209,102,0.2);
+        }
+    </style>
+
     <script>
         let adminToken = '';
+        let scoresData = [];
+        let currentTab = 'rooms'; // 'rooms' or 'crossword'
 
         function escapeHTML(str) {
             if (typeof str !== 'string') return str;
@@ -196,6 +230,7 @@
                     adminToken = data.token;
                     document.getElementById('login-container').style.display = 'none';
                     document.getElementById('dashboard-container').style.display = 'block';
+                    setupTabListeners();
                     loadScores();
                 } else {
                     errorEl.textContent = 'Invalid password';
@@ -208,23 +243,56 @@
             }
         });
 
+        function setupTabListeners() {
+            const btnRooms = document.getElementById('tab-btn-rooms');
+            const btnCrossword = document.getElementById('tab-btn-crossword');
+
+            btnRooms.addEventListener('click', () => {
+                if (currentTab === 'rooms') return;
+                currentTab = 'rooms';
+                btnRooms.classList.add('active');
+                btnCrossword.classList.remove('active');
+                renderScores();
+            });
+
+            btnCrossword.addEventListener('click', () => {
+                if (currentTab === 'crossword') return;
+                currentTab = 'crossword';
+                btnCrossword.classList.add('active');
+                btnRooms.classList.remove('active');
+                renderScores();
+            });
+        }
+
         async function loadScores() {
             try {
                 const res = await fetch('/api/scores');
-                const scores = await res.json();
-                
-                const list = document.getElementById('score-list');
-                list.innerHTML = '';
-                
-                if(scores.length === 0) {
-                    list.innerHTML = '<p style="text-align:center; color:#8e8e93;">No scores submitted yet.</p>';
-                    return;
-                }
+                scoresData = await res.json();
+                renderScores();
+            } catch (err) {
+                console.error(err);
+                alert('Error loading scores. Is the server running?');
+            }
+        }
 
-                scores.forEach((s, idx) => {
+        function renderScores() {
+            const list = document.getElementById('score-list');
+            list.innerHTML = '';
+            
+            if(scoresData.length === 0) {
+                list.innerHTML = '<p style="text-align:center; color:#8e8e93;">No scores submitted yet.</p>';
+                return;
+            }
+
+            if (currentTab === 'rooms') {
+                // Filter and sort by rooms score (highest first), then rooms time (lowest first)
+                const roomsScores = [...scoresData].filter(s => s.rooms);
+                roomsScores.sort((a, b) => b.rooms.score - a.rooms.score || a.rooms.time - b.rooms.time);
+
+                roomsScores.forEach((s, idx) => {
                     let itemsHtml = '<p style="color:#888; font-size:0.9rem; margin-top:0;">No item analysis available for this entry.</p>';
-                    if (s.items && s.items.length > 0) {
-                        itemsHtml = s.items.map(item => {
+                    if (s.rooms.items && s.rooms.items.length > 0) {
+                        itemsHtml = s.rooms.items.map(item => {
                             const isCorrect = item.status === 'correct';
                             const statusColor = isCorrect ? 'status-correct' : 'status-incorrect';
                             const statusIcon = isCorrect ? '✓' : '✗';
@@ -247,7 +315,7 @@
                                 <div class="score-header-content">
                                     <span style="font-weight:bold;">#${idx + 1} &nbsp; ${escapeHTML(s.team)}</span>
                                     <div style="display:flex; align-items:center; gap:20px;">
-                                        <span>${s.score} pts &nbsp;|&nbsp; ${s.formatted}</span>
+                                        <span>${s.rooms.score} pts &nbsp;|&nbsp; ${s.rooms.formatted}</span>
                                         <div class="score-actions">
                                             <button class="btn-secondary btn-small" onclick="toggleDetails(${idx})">Analyze</button>
                                             <button class="btn-danger btn-small" data-team="${escapeHTML(s.team)}" onclick="deleteTeam(this.dataset.team)">Delete</button>
@@ -262,9 +330,43 @@
                         </div>
                     `;
                 });
-            } catch (err) {
-                console.error(err);
-                alert('Error loading scores. Is the server running?');
+            } else {
+                // Crossword & Total Leaderboard
+                const crosswordScores = [...scoresData];
+                crosswordScores.sort((a, b) => {
+                    const aCompleted = a.crossword && a.crossword.completed ? 1 : 0;
+                    const bCompleted = b.crossword && b.crossword.completed ? 1 : 0;
+                    if (aCompleted !== bCompleted) {
+                        return bCompleted - aCompleted;
+                    }
+                    if (aCompleted === 1) {
+                        return a.crossword.time - b.crossword.time;
+                    }
+                    return 0;
+                });
+
+                crosswordScores.forEach((s, idx) => {
+                    const hasCompleted = s.crossword && s.crossword.completed;
+                    const statusText = hasCompleted ? `<span class="status-correct" style="font-weight:bold;">COMPLETED</span>` : `<span style="color:#8e8e93;">IN PROGRESS</span>`;
+                    const timeText = hasCompleted ? s.crossword.formatted : '--:--';
+                    
+                    list.innerHTML += `
+                        <div class="score-row">
+                            <div style="width: 100%;">
+                                <div class="score-header-content">
+                                    <span style="font-weight:bold;">#${idx + 1} &nbsp; ${escapeHTML(s.team)}</span>
+                                    <div style="display:flex; align-items:center; gap:20px;">
+                                        <span style="font-size: 0.95rem; color: #aaa;">Status: ${statusText}</span>
+                                        <span>Total Time: ${timeText}</span>
+                                        <div class="score-actions">
+                                            <button class="btn-danger btn-small" data-team="${escapeHTML(s.team)}" onclick="deleteTeam(this.dataset.team)">Delete</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
             }
         }
 

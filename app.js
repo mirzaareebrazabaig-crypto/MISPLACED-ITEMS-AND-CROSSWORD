@@ -3,6 +3,32 @@
    ========================================== */
 
 document.addEventListener('DOMContentLoaded', () => {
+    // --- Global Game State ---
+    window.gameState = {
+        teamName: '',
+        sessionToken: '',
+        startTime: 0,
+        roomsLocked: false,
+        roomsScore: 0,
+        roomsTime: 0,
+        crosswordCompleted: false,
+        totalTime: 0,
+        audioCtx: null,
+        isMuted: false
+    };
+
+    // Define global properties to bridge local audio variables to the shared state
+    Object.defineProperty(window, 'audioCtx', {
+        get() { return window.gameState.audioCtx; },
+        set(val) { window.gameState.audioCtx = val; },
+        configurable: true
+    });
+    Object.defineProperty(window, 'isMuted', {
+        get() { return window.gameState.isMuted; },
+        set(val) { window.gameState.isMuted = val; },
+        configurable: true
+    });
+
     // --- State Variables ---
     let currentAge = 5;
 
@@ -16,62 +42,14 @@ document.addEventListener('DOMContentLoaded', () => {
             '"': '&quot;'
         }[tag] || tag));
     }
-    let gameStartTime = 0;
-    let currentScenario = 0;
     let gameStarted = false;
     let timerInterval = null;
-    let isComputerUnlocked = true;
-    let sessionToken = '';
+    let gameStartTime = 0;
+    let isComputerUnlocked = false;
 
-    // Phase 2: Preset Scenarios for Randomization
-    const scenarios = [
-        [ // Scenario 0
-            { id: 'misplaced-drawing', startRoom: 10, left: '40%', top: '50%' },
-            { id: 'misplaced-gift', startRoom: 10, left: '70%', top: '72%' },
-            { id: 'misplaced-block', startRoom: 15, left: '12%', top: '38%' },
-            { id: 'misplaced-apology', startRoom: 5, left: '15%', top: '68%' },
-            { id: 'misplaced-texts', startRoom: 15, left: '30%', top: '68%' },
-            { id: 'misplaced-trip-form', startRoom: 15, left: '50%', top: '58%' },
-            { id: 'misplaced-graduation-album', startRoom: 5, left: '65%', top: '74%' },
-            { id: 'misplaced-visa-form', startRoom: 10, left: '15%', top: '85%' },
-            { id: 'misplaced-chemistry-kit', startRoom: 10, left: '60%', top: '80%' }
-        ],
-        [ // Scenario 1
-            { id: 'misplaced-drawing', startRoom: 15, left: '55%', top: '66%' },
-            { id: 'misplaced-gift', startRoom: 15, left: '70%', top: '58%' },
-            { id: 'misplaced-block', startRoom: 10, left: '15%', top: '85%' },
-            { id: 'misplaced-apology', startRoom: 15, left: '12%', top: '38%' },
-            { id: 'misplaced-texts', startRoom: 5, left: '15%', top: '68%' },
-            { id: 'misplaced-trip-form', startRoom: 5, left: '65%', top: '74%' },
-            { id: 'misplaced-graduation-album', startRoom: 10, left: '40%', top: '50%' },
-            { id: 'misplaced-visa-form', startRoom: 10, left: '70%', top: '72%' },
-            { id: 'misplaced-chemistry-kit', startRoom: 5, left: '28%', top: '62%' }
-        ],
-        [ // Scenario 2
-            { id: 'misplaced-drawing', startRoom: 15, left: '30%', top: '68%' },
-            { id: 'misplaced-gift', startRoom: 10, left: '60%', top: '80%' },
-            { id: 'misplaced-block', startRoom: 15, left: '50%', top: '58%' },
-            { id: 'misplaced-apology', startRoom: 5, left: '65%', top: '74%' },
-            { id: 'misplaced-texts', startRoom: 5, left: '28%', top: '62%' },
-            { id: 'misplaced-trip-form', startRoom: 15, left: '70%', top: '58%' },
-            { id: 'misplaced-graduation-album', startRoom: 5, left: '15%', top: '68%' },
-            { id: 'misplaced-visa-form', startRoom: 10, left: '50%', top: '40%' },
-            { id: 'misplaced-chemistry-kit', startRoom: 10, left: '15%', top: '85%' }
-        ]
-    ];
-
-    function applyScenario() {
-        // Guaranteed to pick a different random scenario than the last refresh
-        let lastScenario = parseInt(localStorage.getItem('lastScenario') || '-1');
-        let nextScenario = Math.floor(Math.random() * scenarios.length);
-        if (nextScenario === lastScenario && scenarios.length > 1) {
-            nextScenario = (nextScenario + 1) % scenarios.length;
-        }
-        currentScenario = nextScenario;
-        localStorage.setItem('lastScenario', currentScenario);
-        
-        const preset = scenarios[currentScenario];
-        preset.forEach(itemConfig => {
+    function applyScenario(startingPlacements) {
+        if (!startingPlacements) return;
+        startingPlacements.forEach(itemConfig => {
             const el = document.querySelector(`.hotspot[data-item="${itemConfig.id}"]`);
             if (el) {
                 const targetCanvas = document.getElementById(`canvas-age-${itemConfig.startRoom}`);
@@ -88,23 +66,29 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    applyScenario();
-
-    async function startSession() {
-        if (sessionToken) return;
+    async function startSession(teamName) {
         try {
-            const res = await fetch('/api/start-session', { method: 'POST' });
+            const res = await fetch('/api/start-session', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ team: teamName })
+            });
+            const data = await res.json();
             if (res.ok) {
-                const data = await res.json();
-                sessionToken = data.token;
+                window.gameState.sessionToken = data.token;
+                applyScenario(data.startingPlacements);
+                return true;
+            } else {
+                alert(data.error || 'Failed to start session');
+                return false;
             }
         } catch (err) {
             console.error('Error starting session:', err);
+            alert('Error starting session. Check server connection.');
+            return false;
         }
     }
-    startSession();
-    let audioCtx = null;
-    let isMuted = false;
+
     let currentSynthNodes = [];
     let audioSequencers = [];
 
@@ -134,17 +118,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnHelp = document.getElementById('btn-help');
     const btnCloseHelp = document.getElementById('btn-close-help');
     const helpModal = document.getElementById('help-modal');
-
-    // Submit Findings Modal Elements
-    const btnSubmitFindings = document.getElementById('btn-submit-findings');
-    const btnCloseFindings = document.getElementById('btn-close-findings');
-    const submitFindingsModal = document.getElementById('submit-findings-modal');
-    const btnSubmitForm = document.getElementById('btn-submit-form');
-    const formErrorMsg = document.getElementById('form-error-msg');
-
-    // --- Landing Screen Door Selection ---
-    // (Handled at the bottom of the file)
-
 
     // --- Web Audio Procedural Soundscape Synthesizer ---
     function initAudio() {
@@ -388,22 +361,53 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Audio Controls
-    btnAudioToggle.addEventListener('click', () => {
-        isMuted = !isMuted;
+    function syncAudioUI() {
+        const btnCrosswordAudio = document.getElementById('btn-crossword-audio');
         if (isMuted) {
             stopAllSynths();
-            btnAudioToggle.querySelector('.btn-text').textContent = 'Sound: Off';
-            btnAudioToggle.style.opacity = '0.5';
+            if (btnAudioToggle) {
+                btnAudioToggle.querySelector('.btn-text').textContent = 'Sound: Off';
+                btnAudioToggle.style.opacity = '0.5';
+            }
+            if (btnCrosswordAudio) {
+                const textEl = btnCrosswordAudio.querySelector('.btn-text');
+                const iconEl = btnCrosswordAudio.querySelector('.btn-icon');
+                if (textEl) textEl.textContent = 'Sound: Off';
+                if (iconEl) iconEl.textContent = '🔇';
+                btnCrosswordAudio.style.opacity = '0.5';
+            }
         } else {
             if (!audioCtx) {
                 initAudio();
             } else {
                 startSoundscape(currentAge);
             }
-            btnAudioToggle.querySelector('.btn-text').textContent = 'Sound: On';
-            btnAudioToggle.style.opacity = '1';
+            if (btnAudioToggle) {
+                btnAudioToggle.querySelector('.btn-text').textContent = 'Sound: On';
+                btnAudioToggle.style.opacity = '1';
+            }
+            if (btnCrosswordAudio) {
+                const textEl = btnCrosswordAudio.querySelector('.btn-text');
+                const iconEl = btnCrosswordAudio.querySelector('.btn-icon');
+                if (textEl) textEl.textContent = 'Sound: On';
+                if (iconEl) iconEl.textContent = '🔊';
+                btnCrosswordAudio.style.opacity = '1';
+            }
         }
+    }
+
+    btnAudioToggle.addEventListener('click', () => {
+        isMuted = !isMuted;
+        syncAudioUI();
     });
+
+    const btnCrosswordAudio = document.getElementById('btn-crossword-audio');
+    if (btnCrosswordAudio) {
+        btnCrosswordAudio.addEventListener('click', () => {
+            isMuted = !isMuted;
+            syncAudioUI();
+        });
+    }
 
     // --- Help Modal Navigation ---
     btnHelp.addEventListener('click', () => {
@@ -423,7 +427,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 const elapsed = Date.now() - gameStartTime;
                 const m = Math.floor(elapsed / 60000).toString().padStart(2, '0');
                 const s = Math.floor((elapsed % 60000) / 1000).toString().padStart(2, '0');
-                timerEl.textContent = `${m}:${s}`;
+                const timeString = `${m}:${s}`;
+                
+                timerEl.textContent = timeString;
+                const crosswordTimerEl = document.getElementById('crossword-timer');
+                if (crosswordTimerEl) {
+                    crosswordTimerEl.textContent = timeString;
+                }
             }, 1000);
             
             // Auto-start audio if they haven't explicitly muted
@@ -433,7 +443,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-
     // ==========================================
     // PHASE 2: DRAG & DROP AND SCORING ENGINE
     // ==========================================
@@ -441,7 +450,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const inventorySlots = document.getElementById('inventory-slots');
     const roomContainer = document.getElementById('room-layout-container');
     const btnFinishGame = document.getElementById('btn-finish-game');
-    const leaderboardModal = document.getElementById('leaderboard-modal');
     
     let draggedItem = null;
     let offsetX = 0, offsetY = 0;
@@ -462,10 +470,18 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Make sure all elements with class .draggable are properly configured
+    const coreItems = [
+        'misplaced-drawing', 'misplaced-gift', 'misplaced-block',
+        'misplaced-apology', 'misplaced-texts', 'misplaced-trip-form',
+        'misplaced-graduation-album', 'misplaced-visa-form', 'misplaced-chemistry-kit'
+    ];
     document.querySelectorAll('.draggable').forEach(item => {
-        const age = item.closest('.room-canvas')?.id.split('-')[2];
-        if (age && !item.hasAttribute('data-origin')) {
-            item.setAttribute('data-origin', age);
+        const isCore = coreItems.includes(item.dataset.item);
+        if (!isCore) {
+            const age = item.closest('.room-canvas')?.id.split('-')[2];
+            if (age && !item.hasAttribute('data-origin')) {
+                item.setAttribute('data-origin', age);
+            }
         }
         item.dataset.defaultWidth = item.style.width;
         item.dataset.defaultHeight = item.style.height;
@@ -473,6 +489,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.querySelectorAll('.draggable').forEach(item => {
         item.addEventListener('pointerdown', (e) => {
+            if (window.gameState.roomsLocked) return;
             if(e.button !== 0 && e.pointerType === 'mouse') return; // only left click
             isPointerDown = true;
             hasMoved = false;
@@ -617,54 +634,36 @@ document.addEventListener('DOMContentLoaded', () => {
         let teamName = document.getElementById('team-name-input').value.trim();
         if (!teamName) {
             teamName = prompt("Please enter your Team Name before locking in your answers:");
-            if (!teamName) return; // Cancel if empty
+            if (!teamName) return;
         }
+        window.gameState.teamName = teamName;
 
-        // Calculate Time
-        const endTime = Date.now();
-        const timeTakenMs = endTime - gameStartTime;
-        const minutes = Math.floor(timeTakenMs / 60000);
-        const seconds = Math.floor((timeTakenMs % 60000) / 1000);
-        const timeFormatted = `${minutes}m ${seconds}s`;
-
-        // Check correctness
-        let correctCount = 0;
-        const itemResults = [];
-        const coreItems = [
-            'misplaced-drawing', 'misplaced-gift', 'misplaced-block',
-            'misplaced-apology', 'misplaced-texts', 'misplaced-trip-form',
-            'misplaced-graduation-album', 'misplaced-visa-form', 'misplaced-chemistry-kit'
-        ];
-        
+        const placements = [];
         document.querySelectorAll('.draggable').forEach(item => {
             const isCore = coreItems.includes(item.dataset.item);
-            if (!isCore) return; // Skip non-core items for scoring and results
+            if (!isCore) return;
             
-            const correctRoom = item.dataset.origin;
             const currentParentId = item.parentNode.id;
-            const itemName = item.querySelector('.hotspot-label').textContent;
+            let currentRoom = currentParentId.replace('canvas-age-', '');
+            if (currentParentId === 'inventory-slots') currentRoom = 'inventory';
             
-            if (currentParentId === `canvas-age-${correctRoom}`) {
-                correctCount++;
-                itemResults.push({ name: itemName, status: 'correct', room: correctRoom });
-            } else {
-                let currentRoom = currentParentId.replace('canvas-age-', '');
-                if (currentParentId === 'inventory-slots') currentRoom = 'inventory';
-                itemResults.push({ name: itemName, status: 'incorrect', room: currentRoom });
-            }
+            placements.push({
+                id: item.dataset.item,
+                name: item.querySelector('.hotspot-label').textContent,
+                room: currentRoom
+            });
         });
-        
-        const score = Math.round((correctCount / 9) * 100);
 
-        document.getElementById('final-score-text').textContent = 
-            `Team ${teamName} placed ${correctCount}/9 items correctly in ${timeFormatted}. Total Score: ${score}`;
-        
         try {
             // Post to Server
-            const response = await fetch('/api/submit-score', {
+            const response = await fetch('/api/submit-rooms', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ team: teamName, score, time: timeTakenMs, formatted: timeFormatted, items: itemResults, token: sessionToken })
+                body: JSON.stringify({
+                    team: teamName,
+                    items: placements,
+                    token: window.gameState.sessionToken
+                })
             });
             const data = await response.json();
 
@@ -679,45 +678,30 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            // Successfully submitted! Lock out the UI.
-            clearInterval(timerInterval);
+            // Successfully submitted Rooms! Lock them.
+            window.gameState.roomsLocked = true;
+            window.gameState.roomsScore = data.score;
+            window.gameState.roomsTime = data.formatted;
+
             btnFinishGame.disabled = true;
-            btnFinishGame.textContent = 'Game Over';
+            btnFinishGame.textContent = 'Room Placements Locked';
             btnFinishGame.style.opacity = '0.5';
+
             document.querySelectorAll('.draggable').forEach(el => {
-                el.classList.remove('draggable');
+                el.style.cursor = 'pointer'; // show it's clickable for popups, but not draggable
             });
 
-            // Render Item Results
-            const itemResultsContainer = document.getElementById('item-results-list');
-            itemResultsContainer.innerHTML = '';
-            itemResults.forEach(item => {
-                const isCorrect = item.status === 'correct';
-                const color = isCorrect ? '#2ecc71' : '#e74c3c';
-                const icon = isCorrect ? '✅' : '❌';
-                const locationText = isCorrect ? `Correct Room (Age ${item.room})` : `Left in ${item.room === 'inventory' ? 'Inventory' : `Age ${item.room}`}`;
-                itemResultsContainer.innerHTML += `
-                    <div style="display:flex; justify-content:space-between; background:rgba(255,255,255,0.05); padding:8px 12px; border-radius:6px; border-left: 4px solid ${color};">
-                        <span>${icon} <strong>${item.name}</strong></span>
-                        <span style="color: var(--text-muted); font-size: 0.9em;">${locationText}</span>
-                    </div>
-                `;
-            });
+            // Unlock the crossword mode navigation
+            const btnHeaderCrossword = document.getElementById('btn-header-crossword');
+            if (btnHeaderCrossword) {
+                btnHeaderCrossword.style.display = 'flex';
+            }
 
-            // Render Leaderboard
-            const listContainer = document.getElementById('leaderboard-list');
-            listContainer.innerHTML = '';
-            data.slice(0, 10).forEach((entry, idx) => {
-                listContainer.innerHTML += `
-                    <div style="display:flex; justify-content:space-between; background:rgba(255,255,255,0.05); padding:8px 12px; border-radius:6px;">
-                        <span><strong>#${idx + 1}</strong> ${escapeHTML(entry.team)}</span>
-                        <span>${entry.score} pts (${entry.formatted})</span>
-                    </div>
-                `;
-            });
-            leaderboardModal.classList.add('active');
+            alert(`Room placements locked in successfully! Score: ${data.score}%. Proceeding to Part 2: Memory Crossword.`);
+            switchMode('crossword');
+
         } catch (err) {
-            console.error('Error submitting score:', err);
+            console.error('Error submitting rooms score:', err);
             alert('Failed to submit score to the server. Please check your connection.');
         }
     });
@@ -756,8 +740,91 @@ document.addEventListener('DOMContentLoaded', () => {
         navButtons[age].addEventListener('click', () => changeRoom(age));
     });
 
-    // Wire up Landing Screen Doors
+    // --- Mode Navigation (Rooms vs Crossword) ---
+    const btnHeaderRooms = document.getElementById('btn-header-rooms');
+    const btnHeaderCrossword = document.getElementById('btn-header-crossword');
 
+    function switchMode(mode) {
+        const roomLayout = document.getElementById('room-layout-container');
+        const crosswordLayout = document.getElementById('crossword-container');
+        const inventoryBar = document.getElementById('inventory-bar');
+        const timelineTabs = document.querySelector('.timeline-tabs');
+        const headerFinishBtn = document.getElementById('btn-finish-game');
+        
+        const roomAgeIndicator = document.getElementById('room-age-indicator');
+        const appHeaderTitle = document.getElementById('app-header-title');
+
+        if (mode === 'rooms') {
+            // Header title updates
+            if (roomAgeIndicator) roomAgeIndicator.style.display = 'inline-block';
+            if (appHeaderTitle) appHeaderTitle.textContent = "Sam's Bedroom";
+            
+            // Header buttons updates
+            if (btnHeaderRooms) btnHeaderRooms.style.display = 'none';
+            if (window.gameState.roomsLocked) {
+                if (btnHeaderCrossword) btnHeaderCrossword.style.display = 'flex';
+            } else {
+                if (btnHeaderCrossword) btnHeaderCrossword.style.display = 'none';
+            }
+            
+            roomLayout.style.display = 'block';
+            inventoryBar.style.display = 'flex';
+            timelineTabs.style.display = 'flex';
+            if (!window.gameState.roomsLocked) {
+                headerFinishBtn.style.display = 'flex';
+            } else {
+                headerFinishBtn.style.display = 'none';
+            }
+            crosswordLayout.style.display = 'none';
+            viewport.classList.remove('crossword-active');
+            document.body.classList.remove('crossword-mode-active');
+        } else if (mode === 'crossword') {
+            // Header title updates - hide age indicator and change title
+            if (roomAgeIndicator) roomAgeIndicator.style.display = 'none';
+            if (appHeaderTitle) appHeaderTitle.textContent = "Project Rewind";
+            
+            // Header buttons updates - show Explore Bedroom button on the right
+            if (btnHeaderRooms) btnHeaderRooms.style.display = 'flex';
+            if (btnHeaderCrossword) btnHeaderCrossword.style.display = 'none';
+
+            roomLayout.style.display = 'none';
+            inventoryBar.style.display = 'none';
+            timelineTabs.style.display = 'none';
+            headerFinishBtn.style.display = 'none';
+            crosswordLayout.style.display = 'block';
+            viewport.classList.add('crossword-active');
+            document.body.classList.add('crossword-mode-active');
+            // Sync audio buttons UI state
+            syncAudioUI();
+            
+            // Trigger crossword initialization if not done yet
+            if (window.initCrosswordGrid) {
+                window.initCrosswordGrid();
+            }
+        }
+    }
+    window.switchMode = switchMode; // Expose globally
+
+    if (btnHeaderRooms) {
+        btnHeaderRooms.addEventListener('click', () => {
+            switchMode('rooms');
+        });
+    }
+
+    if (btnHeaderCrossword) {
+        btnHeaderCrossword.addEventListener('click', () => {
+            switchMode('crossword');
+        });
+    }
+
+    const btnCrosswordBack = document.getElementById('btn-crossword-back');
+    if (btnCrosswordBack) {
+        btnCrosswordBack.addEventListener('click', () => {
+            switchMode('rooms');
+        });
+    }
+
+    // Wire up Landing Screen Doors
     document.querySelectorAll('.door-card').forEach(door => {
         door.addEventListener('click', async () => {
             const teamInputEl = document.getElementById('team-name-input');
@@ -768,24 +835,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
             
-            try {
-                // Pre-check for duplicate team name
-                const res = await fetch('/api/scores');
-                const scores = await res.json();
-                if (scores.find(s => s.team.trim().toLowerCase() === teamInput.toLowerCase())) {
-                    teamInputEl.classList.add('error-shake');
-                    setTimeout(() => teamInputEl.classList.remove('error-shake'), 400);
-                    alert('Team name already exists! Please choose another name.');
-                    return;
-                }
-            } catch(e) {
-                console.error('Validation error:', e);
+            // Start session with team name (handles duplicate check securely on backend)
+            const success = await startSession(teamInput);
+            if (!success) {
+                teamInputEl.classList.add('error-shake');
+                setTimeout(() => teamInputEl.classList.remove('error-shake'), 400);
+                return;
             }
+            
+            // Set teamName in gameState
+            window.gameState.teamName = teamInput;
 
             const selectedAge = parseInt(door.dataset.doorAge);
-            
-            // Ensure we have a session token
-            await startSession();
             
             // Hide landing screen and start the sequence
             if(landingScreen) landingScreen.classList.remove('active');
@@ -793,1313 +854,131 @@ document.addEventListener('DOMContentLoaded', () => {
             // Show help modal immediately
             if(helpModal) helpModal.classList.add('active');
             
+            // Show navigation tabs
+            const modeNav = document.getElementById('game-mode-nav');
+            if (modeNav) modeNav.style.display = 'none';
+
             changeRoom(selectedAge);
         });
     });
-
 
     // ==========================================
     // INTERACTIVE MODAL SUB-ELEMENTS & CONTENT DATA
     // ==========================================
 
-    // Crayon Drawings (Age 5, Year 2010)
-    const crayonSVGs = {
-        'family': `
-            <svg viewBox="0 0 150 150" xmlns="http://www.w3.org/2000/svg">
-                <rect width="150" height="150" fill="white"/>
-                <text x="15" y="25" font-family="Caveat" font-size="14" fill="#333" font-weight="bold">MY FAMILY</text>
-                
-                <!-- Distant parents drawn small -->
-                <!-- Mother -->
-                <circle cx="25" cy="100" r="8" fill="none" stroke="#e63946" stroke-width="2"/>
-                <circle cx="22" cy="98" r="0.8" fill="#e63946"/>
-                <circle cx="28" cy="98" r="0.8" fill="#e63946"/>
-                <path d="M22,103 Q25,105 28,103" fill="none" stroke="#e63946" stroke-width="1"/>
-                <polygon points="25,108 17,128 33,128" fill="none" stroke="#e63946" stroke-width="1.5"/>
-                <path d="M21,128 L19,138" fill="none" stroke="#e63946" stroke-width="1.5"/>
-                <path d="M29,128 L31,138" fill="none" stroke="#e63946" stroke-width="1.5"/>
-                <path d="M20,113 Q12,110 10,118" fill="none" stroke="#e63946" stroke-width="1.5"/>
-                <path d="M30,113 Q38,110 40,118" fill="none" stroke="#e63946" stroke-width="1.5"/>
-                
-                <!-- Father -->
-                <circle cx="48" cy="102" r="7" fill="none" stroke="#1d3557" stroke-width="2"/>
-                <circle cx="45" cy="100" r="0.8" fill="#1d3557"/>
-                <circle cx="51" cy="100" r="0.8" fill="#1d3557"/>
-                <path d="M45,105 Q48,107 51,105" fill="none" stroke="#1d3557" stroke-width="1"/>
-                <rect x="42" y="109" width="12" height="18" fill="none" stroke="#1d3557" stroke-width="1.5"/>
-                <path d="M45,127 L43,138" fill="none" stroke="#1d3557" stroke-width="1.5"/>
-                <path d="M51,127 L53,138" fill="none" stroke="#1d3557" stroke-width="1.5"/>
-                <path d="M42,114 Q34,111 32,119" fill="none" stroke="#1d3557" stroke-width="1.5"/>
-                <path d="M54,114 Q62,111 64,119" fill="none" stroke="#1d3557" stroke-width="1.5"/>
-                
-                <!-- Sam drawn large and isolated -->
-                <circle cx="105" cy="80" r="16" fill="none" stroke="#457b9d" stroke-width="2"/>
-                <!-- Eyes -->
-                <circle cx="99" cy="76" r="1.5" fill="#457b9d"/>
-                <circle cx="111" cy="76" r="1.5" fill="#457b9d"/>
-                <!-- Mouth -->
-                <path d="M98,85 Q105,92 112,85" fill="none" stroke="#457b9d" stroke-width="2"/>
-                <!-- Hair -->
-                <path d="M93,68 L96,62 L100,66 L105,60 L110,66 L114,62 L117,68" fill="none" stroke="#457b9d" stroke-width="2"/>
-                <!-- Shirt -->
-                <polygon points="105,96 85,125 125,125" fill="none" stroke="#457b9d" stroke-width="2"/>
-                <!-- Legs -->
-                <path d="M98,125 L93,143" fill="none" stroke="#457b9d" stroke-width="2"/>
-                <path d="M112,125 L117,143" fill="none" stroke="#457b9d" stroke-width="2"/>
-                <!-- Arms -->
-                <path d="M93,108 L78,98 L73,88" fill="none" stroke="#457b9d" stroke-width="2"/>
-                <path d="M117,108 L132,98 L137,88" fill="none" stroke="#457b9d" stroke-width="2"/>
-                <!-- Fingers -->
-                <path d="M73,88 L68,85 M73,88 L70,82 M73,88 L75,81" fill="none" stroke="#457b9d" stroke-width="1.5"/>
-                <path d="M137,88 L142,85 M137,88 L140,82 M137,88 L135,81" fill="none" stroke="#457b9d" stroke-width="1.5"/>
-                
-                <!-- Sun -->
-                <circle cx="130" cy="25" r="10" fill="none" stroke="#e9c46a" stroke-width="2"/>
-                <line x1="130" y1="10" x2="130" y2="15" stroke="#e9c46a" stroke-width="1.5"/>
-                <line x1="130" y1="35" x2="130" y2="40" stroke="#e9c46a" stroke-width="1.5"/>
-                <line x1="115" y1="25" x2="120" y2="25" stroke="#e9c46a" stroke-width="1.5"/>
-                <line x1="140" y1="25" x2="145" y2="25" stroke="#e9c46a" stroke-width="1.5"/>
-            </svg>`,
-        'house': `
-            <svg viewBox="0 0 150 150" xmlns="http://www.w3.org/2000/svg">
-                <rect width="150" height="150" fill="white"/>
-                <polygon points="30,95 75,55 120,95" fill="none" stroke="#e76f51" stroke-width="3"/>
-                <rect x="45" y="95" width="60" height="50" fill="none" stroke="#e76f51" stroke-width="3"/>
-                <rect x="67" y="115" width="16" height="30" fill="none" stroke="#e76f51" stroke-width="2"/>
-                <!-- Single child outside alone -->
-                <circle cx="15" cy="115" r="6" fill="none" stroke="#264653" stroke-width="2"/>
-                <line x1="15" y1="121" x2="15" y2="140" stroke="#264653" stroke-width="2"/>
-            </svg>`,
-        'sun': `
-            <svg viewBox="0 0 150 150" xmlns="http://www.w3.org/2000/svg">
-                <rect width="150" height="150" fill="white"/>
-                <circle cx="125" cy="30" r="16" fill="none" stroke="#e9c46a" stroke-width="3"/>
-                <path d="M25,140 C45,100 45,100 45,140" stroke="green" stroke-width="2.5"/>
-                <circle cx="35" cy="90" r="20" fill="none" stroke="green" stroke-width="2"/>
-                <!-- Lonely child under tree -->
-                <circle cx="95" cy="115" r="7" fill="none" stroke="blue" stroke-width="2"/>
-                <line x1="95" y1="122" x2="95" y2="142" stroke="blue" stroke-width="2"/>
-            </svg>`
-    };
-
-    // Picture Book Pages (Age 5, 2010)
+    // We will keep these local state variables for sub-item popups
     let currentBookPage = 0;
-    const pictureBookPages = [
-        {
-            left: "Once upon a time, there was a little boy named Sam. Sam loved to run and jump in the tall green grass.",
-            right: "But most of all, Sam loved his best friend in the whole world—a happy little puppy named Buddy."
-        },
-        {
-            left: "Buddy had short orange legs and floppy ears. Whenever Sam was sad, Buddy would lick his nose and bark happily.",
-            right: "'Don't worry, Sam!' Buddy's barks seemed to say. 'We will go on a grand adventure together!'"
-        },
-        {
-            left: "They built big castles out of blocks and chased invisible monsters in the garden under the warm gold sun.",
-            right: "Sam was never lonely, because as long as Buddy was by his side, they could conquer the entire universe."
-        }
-    ];
-
-    // DVD TV Console simulator (Age 10, 2015)
+    let pictureBookPages = [];
+    
     let activeDvd = null;
     let dvdTimer = null;
-    const dvdVideos = {
-        'dvd-1': {
-            title: 'Minecraft Walkthrough (Alone) - 2015',
-            desc: 'Cheerful blocky survival gameplay walkthrough. Sam builds a small wooden survival home alone under a square sun.',
-            status: 'Survival Mode: Day 3. Building a shelter.'
-        },
-        'dvd-2': {
-            title: 'Elaborate Fortress Showcase (Alone) - 2015',
-            desc: 'Cheery lofi gaming music. Sam proudly tours a massive cobblestone castle with redstone doors and a quiet virtual dog. Still alone in the game world.',
-            status: 'Fortress Complete. Showing the watchtower.'
-        },
-        'dvd-3': {
-            title: 'DO NOT WATCH (Secret Phone Clip)',
-            desc: '<span style="color:#e63946; font-weight:bold;">Warning: Uncomfortable Bullying Clip.</span> Shaky phone recording of Sam being teased at school. A crowd of classmates mocks his traditional Indian lunchbox food and grabs his schoolbag, while Sam tries to smile it off.',
-            status: 'Schoolyard - secret clip.'
-        }
-    };
-
-    // Cassette monologues (Age 15, 2020) - STRICTLY NON-SUICIDAL
+    let dvdVideos = {};
+    
     let cassettePlaying = false;
     let cassetteInterval = null;
-    const cassetteSubtitles = [
-        "Is anyone there?...",
-        "I'm speaking quietly because Mrs. Patel is down in the study...",
-        "Sometimes... it just feels very lonely.",
-        "Like I'm walking through an empty hallway while everyone else is in groups.",
-        "Mum and Dad left again. Packed suitcases by the front door. 'Sorry we couldn't make it, Sam.'",
-        "They forgot my high school graduation was today... Mrs. Patel signed my report slip instead.",
-        "I kept trying to get their attention with my grades and projects, but it's like they only see their business trips.",
-        "I miss Buddy so much. He was the only one who sat with me and actually listened.",
-        "Now it's just... completely silent here. Every single day.",
-        "I just want to finish school, pack my bags, and find a place where I actually belong..."
-    ];
-
-    // Graduation yearbook student details (Age 15, 2020)
+    let cassetteSubtitles = [];
+    
     let currentYearbookLetter = 'S';
-    const yearbookStudents = {
-        'A': { name: "Amelia Abernathy", quote: "Dream big, shine bright!", photoColor: "#ef476f" },
-        'B': { name: "Benjamin Brooks", quote: "We didn't know we were making memories, we just knew we were having fun.", photoColor: "#ffd166" },
-        'C': { name: "Chloe Carter", quote: "Keep moving forward.", photoColor: "#06d6a0" },
-        'D': { name: "Daniel Davis", quote: "May your coffee be strong and your Fridays short.", photoColor: "#118ab2" },
-        'E': { name: "Emily Evans", quote: "Onto the next chapter!", photoColor: "#073b4c" },
-        'F': { name: "Finley Fisher", quote: "Life is a journey, not a destination.", photoColor: "#ff9f1c" },
-        'G': { name: "Grace Green", quote: "Quiet minds have the richest thoughts.", photoColor: "#2ec4b6" },
-        'H': { name: "Henry Hughes", quote: "We made it!", photoColor: "#e71d36" },
-        'I': { name: "Isabella Ingram", quote: "Always choose kindness.", photoColor: "#7209b7" },
-        'J': { name: "Jack Johnson", quote: "No regrets.", photoColor: "#3f37c9" },
-        'K': { 
-            name: "Kanye West", 
-            quote: "Football is life. St. Christopher varsity squad, we rule this school.", 
-            photoColor: "#4895ef",
-            isCrumpled: true,
-            photoFile: "kanye.png",
-            notes: "Bystander bully - did not stop others."
-        },
-        'L': { name: "Lily Lawson", quote: "The best is yet to come.", photoColor: "#4cc9f0" },
-        'M': { name: "Mason Miller", quote: "Sleep is for the weak.", photoColor: "#f72585" },
-        'N': { name: "Noah Nelson", quote: "Peace out!", photoColor: "#70d6ff" },
-        'O': { name: "Olivia Owen", quote: "Make today amazing.", photoColor: "#ff70a6" },
-        'P': { name: "Penelope Parker", quote: "To infinity and beyond!", photoColor: "#ff9770" },
-        'Q': { name: "Quinn Quinton", quote: "Keep it simple.", photoColor: "#ffd670" },
-        'R': { name: "Ryan Reed", quote: "Thanks for the memories.", photoColor: "#e9ff70" },
-        'S': { 
-            name: "Samrudh Sharma", 
-            quote: "Invisible is easier.", 
-            photoColor: "#00b4d8",
-            isSam: true,
-            photoFile: "sam_15.png",
-            hateComment: "GO BACK TO INDIA"
-        },
-        'T': { name: "Thomas Taylor", quote: "Focus on the good.", photoColor: "#c18c5d" },
-        'U': { name: "Ursula Vance", quote: "Always looking up.", photoColor: "#4f5d75" },
-        'V': { name: "Victoria Vane", quote: "Be yourself.", photoColor: "#ef8354" },
-        'W': { 
-            name: "William K.", 
-            quote: "Always win. Fear is a motivator.", 
-            photoColor: "#b32a2a",
-            isVandalised: true,
-            photoFile: "william.png",
-            notes: "Sam's primary school bully."
-        },
-        'X': { name: "Xavier Xing", quote: "Explore everything.", photoColor: "#6a0dad" },
-        'Y': { name: "Yusuf Yusuf", quote: "Live and learn.", photoColor: "#228b22" },
-        'Z': { name: "Zachary Zeller", quote: "The end of a beginning.", photoColor: "#4682b4" }
-    };
-
+    let yearbookStudents = {};
+    
+    let cupboardBooks = {};
+    let schoolbagItems = {};
+    let posterItems = {};
 
     // --- Popup Expansion Engine ---
-    function openCloseup(itemId) {
-        let contentHtml = '';
-        
-        switch (itemId) {
-            // ==================== ROOM 1 (AGE 5, 2010) ====================
-            case 'corgi-toy':
-                contentHtml = `
-                    <div class="photo-closeup-container">
-                        <div class="photo-matting" style="background:#fff; max-width: 320px;">
-                            <img src="buddy.png" alt="Stuffed Buddy Corgi">
-                            <div class="photo-caption" style="font-family:'Caveat';">Buddy</div>
-                        </div>
-                        <p style="text-align:center; color:var(--text-muted); line-height:1.6; max-width:480px; margin-top:10px;">
-                            A cute orange stuffed corgi plush lying on Sam's pillow. The stitching is clean, and it looks carefully looked after—suggesting Sam hugged it tight every single night.
-                        </p>
-                    </div>`;
-                break;
-                
-            case 'drawing-family':
-                contentHtml = `
-                    <div class="crayon-drawing-closeup">
-                        <div class="crayon-paper">
-                            ${crayonSVGs['family']}
-                        </div>
-                        <div class="crayon-caption">"My Family" (2010)</div>
-                        <p style="text-align:center; color:var(--text-muted); max-width:460px; font-size:0.9rem;">
-                            Sam drew his parents tiny, standing far away at the very edge of the page. Sam drew himself massive in the center, yet completely alone in a giant blank space.
-                        </p>
-                    </div>`;
-                break;
+    async function openCloseup(itemId) {
+        try {
+            const res = await fetch(`/api/lore/${itemId}`);
+            if (!res.ok) {
+                alert('Failed to load details from server.');
+                return;
+            }
+            const data = await res.json();
+            
+            closeupBody.innerHTML = data.html;
+            closeupModal.classList.add('active');
 
-            case 'drawing-house':
-                contentHtml = `
-                    <div class="crayon-drawing-closeup">
-                        <div class="crayon-paper">
-                            ${crayonSVGs['house']}
-                        </div>
-                        <div class="crayon-caption">"Our House" (2010)</div>
-                        <p style="text-align:center; color:var(--text-muted); max-width:460px; font-size:0.9rem;">
-                            A house with perfect square windows, but the front door is shut tight. A single child stands outside all alone, looking inside.
-                        </p>
-                    </div>`;
-                break;
-
-            case 'drawing-dog':
-                contentHtml = `
-                    <div class="crayon-drawing-closeup">
-                        <div class="crayon-paper">
-                            <svg viewBox="0 0 150 150" xmlns="http://www.w3.org/2000/svg">
-                                <rect width="150" height="150" fill="white"/>
-                                <image href="buddy.png" x="15" y="15" width="120" height="120" />
-                                <text x="45" y="142" font-family="Caveat" font-size="16" fill="#b32a2a" font-weight="bold">BUDDY</text>
-                            </svg>
-                        </div>
-                        <div class="crayon-caption">"Buddy"</div>
-                        <p style="text-align:center; color:var(--text-muted); max-width:460px; font-size:0.9rem;">
-                            Sam's hand-drawn crayon portrait of his puppy, Buddy. The letters are written in wobbly child handwriting surrounded by hand-drawn hearts.
-                        </p>
-                    </div>`;
-                break;
-
-            case 'drawing-sun':
-                contentHtml = `
-                    <div class="crayon-drawing-closeup">
-                        <div class="crayon-paper">
-                            ${crayonSVGs['sun']}
-                        </div>
-                        <div class="crayon-caption">"Sun & Tree"</div>
-                        <p style="text-align:center; color:var(--text-muted); max-width:460px; font-size:0.9rem;">
-                            A drawing of a sunny day. A massive tree stands on the left, and a tiny child stands under it, looking up at the sky. No other figures are nearby.
-                        </p>
-                    </div>`;
-                break;
-
-            case 'photo-buddy-5':
-                contentHtml = `
-                    <div class="photo-closeup-container">
-                        <div class="photo-matting" style="max-width:320px;">
-                            <img src="buddy.png" alt="Buddy puppy photo">
-                            <div class="photo-caption">Buddy — 2010</div>
-                        </div>
-                        <p style="text-align:center; color:var(--text-muted); max-width:460px; font-size:0.9rem; line-height:1.6;">
-                            A shiny, prominently placed frame on the bedside table. Buddy the puppy is sitting proudly, looking directly at the camera with his tongue sticking out.
-                        </p>
-                    </div>`;
-                break;
-
-            case 'photo-parents-5':
-                contentHtml = `
-                    <div class="photo-closeup-container">
-                        <div class="photo-matting" style="max-width:320px;">
-                            <img src="family_photo.jpg" alt="Family Portrait">
-                            <div class="photo-caption">Family Portrait</div>
-                        </div>
-                        <p style="text-align:center; color:var(--text-muted); max-width:460px; font-size:0.9rem; line-height:1.6;">
-                            A warm and beautiful family portrait. Sam's parents are smiling, with his mother holding baby Sam wrapped in a yellow swaddle. A rare, happy memory of their time together.
-                        </p>
-                    </div>`;
-                break;
-
-            case 'photo-birthday-5':
-                contentHtml = `
-                    <div class="photo-closeup-container">
-                        <div class="photo-matting" style="max-width:320px;">
-                            <img src="birthday_5.png" alt="My 5th Birthday (2010)" style="width: 100%; height: auto;">
-                            <div class="photo-caption">My 5th Birthday (2010)</div>
-                        </div>
-                        <p style="text-align:center; color:var(--text-muted); max-width:460px; font-size:0.9rem; line-height:1.6; margin-top: 15px;">
-                            Sam sitting alone at a large kitchen table with a birthday cake in front of him. There are empty chairs all around. Sam is looking at the cake and smiling.
-                        </p>
-                    </div>`;
-                break;
-
-            case 'picture-book':
+            // Post-render binding hooks and data assignment
+            if (itemId === 'picture-book') {
+                pictureBookPages = data.pages || [];
                 currentBookPage = 0;
-                contentHtml = `
-                    <div class="book-view-container">
-                        <h3>"The Boy and the Corgi"</h3>
-                        <div class="book-pages-wrapper" id="book-pages-wrapper">
-                            <!-- Populated dynamically -->
-                        </div>
-                        <div class="book-controls">
-                            <button class="book-btn" id="btn-prev-page">Previous</button>
-                            <button class="book-btn" id="btn-next-page">Next</button>
-                        </div>
-                    </div>`;
-                break;
+                updatePictureBook();
+                document.getElementById('btn-prev-page').addEventListener('click', () => {
+                    if (currentBookPage > 0) {
+                        currentBookPage--;
+                        updatePictureBook();
+                    }
+                });
+                document.getElementById('btn-next-page').addEventListener('click', () => {
+                    if (currentBookPage < pictureBookPages.length - 1) {
+                        currentBookPage++;
+                        updatePictureBook();
+                    }
+                });
+            }
 
-            case 'birthday-card':
-                contentHtml = `
-                    <div class="handwritten-letter-container">
-                        <div class="letter-sheet">
-                            <p style="font-weight:bold; margin-bottom:15px;">Happy 5th Birthday Sam!</p>
-                            <p style="margin-bottom:20px;">
-                                Sorry we couldn't make it home tonight. Important business came up at the firm.<br>
-                                We left a gift for you on the kitchen table. Be a good boy for Mrs. Patel!
-                            </p>
-                            <p style="text-align:right;">With love,<br>— Mum & Dad</p>
-                        </div>
-                        <p style="text-align:center; color:var(--text-muted); max-width:460px; font-size:0.85rem;">
-                            The card sits inside a child's hand-decorated envelope, with smiley faces Sam drew himself.
-                        </p>
-                    </div>`;
-                break;
-
-            case 'toy-train':
-                contentHtml = `
-                    <div class="photo-closeup-container">
-                        <h3>Toy Train Set</h3>
-                        <p style="color:var(--text-muted); text-align:center; max-width:460px; font-size:0.9rem; line-height:1.5;">
-                            A pristine toy wooden train set. The tracks are laid out perfectly neat and straight—suggesting Sam played quietly and slowly alone.
-                        </p>
-                    </div>`;
-                break;
-
-            case 'building-blocks':
-                contentHtml = `
-                    <div class="photo-closeup-container">
-                        <h3>Building Blocks</h3>
-                        <p style="color:var(--text-muted); text-align:center; max-width:460px; font-size:0.9rem; line-height:1.5;">
-                            Wooden blocks stacked neatly in a small castle. None of them are knocked over.
-                        </p>
-                    </div>`;
-                break;
-
-            case 'toy-plush':
-                contentHtml = `
-                    <div class="photo-closeup-container">
-                        <h3>Teddy Bear</h3>
-                        <p style="color:var(--text-muted); text-align:center; max-width:460px; font-size:0.9rem; line-height:1.5;">
-                            A soft plush teddy bear sitting neatly on the chair. It looks almost brand new, suggesting Sam spent most of his time hugging his Buddy corgi plush instead.
-                        </p>
-                    </div>`;
-                break;
-
-            case 'tricycle':
-                contentHtml = `
-                    <div class="photo-closeup-container">
-                        <h2 style="color:#d29e79; font-size:1.8rem; margin-bottom:15px; font-weight:500;">Little Red Tricycle</h2>
-                        <p style="color:var(--text-muted); line-height:1.6; max-width:480px; text-align:center;">
-                            Sam's first set of wheels. The paint is chipped from countless "adventures" down the hallway.
-                        </p>
-                    </div>`;
-                break;
-
-            case 'xylophone':
-                contentHtml = `
-                    <div class="photo-closeup-container">
-                        <h2 style="color:#d29e79; font-size:1.8rem; margin-bottom:15px; font-weight:500;">Toy Xylophone</h2>
-                        <p style="color:var(--text-muted); line-height:1.6; max-width:480px; text-align:center;">
-                            A colorful xylophone. Some of the notes are severely out of tune, but it was the source of many early morning concerts.
-                        </p>
-                    </div>`;
-                break;
-
-            case 'misplaced-visa-form':
-                contentHtml = `
-                    <div class="document-view-container">
-                        <div class="report-card-sheet" style="font-family:'Outfit'; max-width:500px;">
-                            <h3 style="color:#118ab2; border-bottom-color:#118ab2;">Student Visa Renewal Form (UK)</h3>
-                            <p style="font-size:0.95rem; line-height:1.6; margin-bottom:15px;">
-                                <strong>Applicant Name:</strong> Samrudh Sharma<br>
-                                <strong>Date of Birth:</strong> 12 Oct 2005<br>
-                                <strong>Date of Signing:</strong> <span style="color:#d90429; font-weight:bold;">15 May 2020</span>
-                            </p>
-                            <p style="font-size:0.9rem; line-height:1.5; color:#444;">
-                                A highly detailed official legal document filled out in neat cursive. It also includes an IELTS preparation slip. 
-                            </p>
-                            <div style="border:2px solid #ccc; padding:10px; margin-top:20px; border-radius:4px; position:relative;">
-                                <span style="font-family:'Caveat'; color:#444; font-size:1.4rem;">
-                                    Guardian Signature: Mrs. Patel
-                                </span>
-                            </div>
-                        </div>
-                    </div>`;
-                break;
-
-            case 'misplaced-trip-form':
-                contentHtml = `
-                    <div class="document-view-container">
-                        <div class="report-card-sheet" style="font-family:'Outfit'; max-width:500px; background:#fff9c4;">
-                            <h3 style="color:#d90429; border-bottom-color:#d90429;">School Excursion Consent</h3>
-                            <p style="font-size:0.95rem; line-height:1.6; margin-bottom:15px;">
-                                <strong>Excursion:</strong> Natural History Museum<br>
-                                <strong>Student:</strong> Samrudh Sharma (Grade 5)<br>
-                                <strong>Date:</strong> <span style="color:#d90429; font-weight:bold;">12 Sept 2015</span>
-                            </p>
-                            <div style="border:2px dashed #444; padding:10px; margin-top:20px; border-radius:4px; position:relative;">
-                                <span style="font-family:'Caveat'; color:#444; font-size:1.4rem;">
-                                    Signed: Mrs. Patel
-                                </span>
-                                <p style="font-size:0.75rem; color:#888; margin-top:5px;">(Note: Parents unavailable to sign)</p>
-                            </div>
-                        </div>
-                    </div>`;
-                break;
-
-            // ==================== ROOM 2 (AGE 10, 2015) ====================
-            case 'photo-buddy-bed':
-                contentHtml = `
-                    <div class="photo-closeup-container">
-                        <div class="photo-matting" style="max-width:320px;">
-                            <img src="buddy.png" alt="Older Buddy corgi photo">
-                            <div class="photo-caption">Buddy, older now — 2015</div>
-                        </div>
-                        <p style="text-align:center; color:var(--text-muted); max-width:460px; font-size:0.9rem; line-height:1.6; margin-top:10px;">
-                            Buddy the corgi, now older, lying on Sam's bed. His snout is turning slightly grey, but his winking expression is still full of character.
-                        </p>
-                    </div>`;
-                break;
-
-            case 'crt-tv-selection':
+            if (itemId === 'crt-tv-selection') {
+                dvdVideos = data.dvds || {};
                 activeDvd = 'dvd-1';
-                contentHtml = `
-                    <div class="tv-dvd-experience">
-                        <div class="tv-large-frame">
-                            <div class="tv-scanlines"></div>
-                            <div class="tv-screen-large" id="tv-screen-large">
-                                <!-- TV screen content loaded dynamically -->
-                            </div>
-                        </div>
-                        <div class="tv-controls-panel">
-                            <h3>Video Game Station & DVDs</h3>
-                            <p style="color:var(--text-muted); font-size:0.85rem; line-height:1.4;">
-                                Put a DVD case into the player to watch a clip of Sam's life on the CRT screen.
-                            </p>
-                            <div class="tv-btn-slot active playing" data-dvd="dvd-1">
-                                <span class="dvd-indicator-dot"></span>
-                                <div>
-                                    <div style="font-weight:500; font-size:0.9rem;">DVD 1: Survival House (2015)</div>
-                                    <div style="font-size:0.75rem; color:var(--text-muted);">Minecraft gameplay walkthrough</div>
-                                </div>
-                            </div>
-                            <div class="tv-btn-slot" data-dvd="dvd-2">
-                                <span class="dvd-indicator-dot"></span>
-                                <div>
-                                    <div style="font-weight:500; font-size:0.9rem;">DVD 2: Fortress Showcase (2015)</div>
-                                    <div style="font-size:0.75rem; color:var(--text-muted);">Minecraft base showcase</div>
-                                </div>
-                            </div>
-                            <div class="tv-btn-slot" data-dvd="dvd-3">
-                                <span class="dvd-indicator-dot"></span>
-                                <div>
-                                    <div style="font-weight:500; font-size:0.9rem; color:#f28482;">DVD 3: DO NOT WATCH (Bullying Clip)</div>
-                                    <div style="font-size:0.75rem; color:var(--text-muted);">Secret phone recording</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>`;
-                break;
+                updateTV();
+                document.querySelectorAll('.tv-btn-slot').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const slot = e.currentTarget;
+                        const dvd = slot.dataset.dvd;
+                        document.querySelectorAll('.tv-btn-slot').forEach(b => b.classList.remove('playing'));
+                        slot.classList.add('playing');
+                        activeDvd = dvd;
+                        updateTV();
+                    });
+                });
+            }
 
-            case 'photo-school-10':
-                contentHtml = `
-                    <div class="photo-closeup-container">
-                        <div class="photo-matting">
-                            <svg viewBox="0 0 180 120" xmlns="http://www.w3.org/2000/svg">
-                                <rect width="180" height="120" fill="#ccc"/>
-                                <circle cx="30" cy="50" r="10" fill="#444"/>
-                                <circle cx="55" cy="48" r="10" fill="#555"/>
-                                <circle cx="80" cy="52" r="10" fill="#666"/>
-                                <circle cx="105" cy="50" r="10" fill="#444"/>
-                                <image href="sam.png" x="135" y="40" width="30" height="36" />
-                            </svg>
-                            <div class="photo-caption">St. Christopher Elementary — Class 5B</div>
-                        </div>
-                        <p style="text-align:center; color:var(--text-muted); max-width:460px; font-size:0.9rem; line-height:1.6;">
-                            A school class group photo from 2015. A dense cluster of kids are laughing and hugging in the center. Samrudh is standing on the far right, slightly apart from the crowd, with a hesitant smile.
-                        </p>
-                    </div>`;
-                break;
+            if (itemId === 'schoolbag') {
+                schoolbagItems = data.items || {};
+                document.querySelectorAll('[data-bag-item]').forEach(card => {
+                    card.addEventListener('click', (e) => {
+                        const target = e.currentTarget.dataset.bagItem;
+                        showSchoolbagItem(target);
+                    });
+                });
+                showSchoolbagItem('note-bullying');
+            }
 
-            case 'photo-festival-10':
-                contentHtml = `
-                    <div class="photo-closeup-container">
-                        <div class="photo-matting">
-                            <svg viewBox="0 0 140 140" xmlns="http://www.w3.org/2000/svg">
-                                <rect width="140" height="140" fill="#fff5e6"/>
-                                <image href="sam.png" x="35" y="20" width="70" height="84" />
-                                <circle cx="45" cy="80" r="15" fill="#e76f51" opacity="0.6"/>
-                                <circle cx="95" cy="85" r="18" fill="#e9c46a" opacity="0.6"/>
-                            </svg>
-                            <div class="photo-caption">Holi Festival 2014</div>
-                        </div>
-                        <p style="text-align:center; color:var(--text-muted); max-width:460px; font-size:0.9rem; line-height:1.6; margin-top:10px;">
-                            One of the rare photos where Sam looks genuinely, completely happy. He is covered in colorful Holi powder, grinning, with traditional Indian sweets in his hands.
-                        </p>
-                    </div>`;
-                break;
+            if (itemId === 'posters-collection') {
+                posterItems = data.items || {};
+                document.querySelectorAll('[data-poster-item]').forEach(card => {
+                    card.addEventListener('click', (e) => {
+                        const target = e.currentTarget.dataset.posterItem;
+                        showPosterItem(target);
+                    });
+                });
+                showPosterItem('minecraft');
+            }
 
-            case 'schoolbag':
-                contentHtml = `
-                    <div class="schoolbag-explorer">
-                        <h3>Sam's Schoolbag Contents (2015)</h3>
-                        <p style="color:var(--text-muted); font-size:0.85rem; margin-bottom:10px;">
-                            Inside the red schoolbag are several crumpled papers and notebooks. Click on each item to examine it.
-                        </p>
-                        <div class="schoolbag-grid">
-                            <div class="bag-item-card" data-bag-item="note-bullying">
-                                <div class="bag-item-icon">📝</div>
-                                <h4>Crumpled Note</h4>
-                                <span style="font-size:0.75rem; color:var(--text-muted);">From a classmate</span>
-                            </div>
-                            <div class="bag-item-card" data-bag-item="report-card">
-                                <div class="bag-item-icon">🎓</div>
-                                <h4>Report Card</h4>
-                                <span style="font-size:0.75rem; color:var(--text-muted);">Excellent Grades</span>
-                            </div>
-                            <div class="bag-item-card" data-bag-item="checklist-fitin">
-                                <div class="bag-item-icon">📌</div>
-                                <h4>"How to Fit In"</h4>
-                                <span style="font-size:0.75rem; color:var(--text-muted);">Handwritten checklist</span>
-                            </div>
-                        </div>
-                        <div id="schoolbag-details-view" style="margin-top:20px; width:100%; display:flex; justify-content:center;">
-                            <!-- Bag item details shown here -->
-                        </div>
-                    </div>`;
-                break;
+            if (itemId === 'bookshelf-cupboard') {
+                cupboardBooks = data.books || {};
+                yearbookStudents = data.yearbookStudents || {};
+                document.querySelectorAll('[data-book]').forEach(card => {
+                    card.addEventListener('click', (e) => {
+                        const book = e.currentTarget.dataset.book;
+                        showCupboardBook(book);
+                    });
+                });
+                showCupboardBook('yearbook');
+            }
 
-            case 'math-homework':
-                contentHtml = `
-                    <div class="document-view-container">
-                        <div class="report-card-sheet" style="font-family:'Outfit'; max-width:500px; transform:rotate(-1deg); padding: 20px;">
-                            <h3 style="color:#d94040; border-bottom-color:#d94040;">Math Homework Sheet</h3>
-                            <p style="font-size:0.95rem; line-height:1.6; margin-bottom:15px;">
-                                <strong>Topic:</strong> Algebra & Fractions<br>
-                                <strong>Student:</strong> Samrudh Sharma — Grade 5
-                            </p>
-                            <p style="font-size:0.9rem; line-height:1.5; color:#444; border:1px solid #ddd; padding:15px; background:#fafafa;">
-                                Sam completed all 20 advanced equations perfectly. A large red "100% - Excellent Work!" is stamped at the top. Sam has clearly shown his brilliance in mathematics early on.
-                            </p>
-                            <div style="border:2px dashed red; padding:10px; margin-top:20px; border-radius:4px; position:relative;">
-                                <span style="font-family:'Architects Daughter'; color:red; font-size:1.1rem; font-weight:bold;">
-                                    Teacher's Note:<br>
-                                    "Please ask your parents to sign this next time so I know they reviewed your grades."
-                                </span>
-                                <p style="font-size:0.75rem; color:#888; margin-top:5px;">(The parent signature line at the bottom remains blank)</p>
-                            </div>
-                        </div>
-                    </div>`;
-                break;
-
-            case 'posters-collection':
-                contentHtml = `
-                    <div class="schoolbag-explorer">
-                        <h3>Sam's Posters & Wall Art</h3>
-                        <div class="schoolbag-grid">
-                            <div class="bag-item-card" data-poster-item="minecraft">
-                                <div class="bag-item-icon">🟩</div>
-                                <h4>Minecraft Poster</h4>
-                            </div>
-                            <div class="bag-item-card" data-poster-item="football">
-                                <div class="bag-item-icon">⚽</div>
-                                <h4>Football Team</h4>
-                            </div>
-                            <div class="bag-item-card" data-poster-item="buddy">
-                                <div class="bag-item-icon">🐶</div>
-                                <h4>Buddy Crayon</h4>
-                            </div>
-                            <div class="bag-item-card" data-poster-item="herobrine">
-                                <div class="bag-item-icon">👻</div>
-                                <h4>Herobrine</h4>
-                            </div>
-                        </div>
-                        <div id="poster-details-view" style="margin-top:20px; width:100%; display:flex; justify-content:center;">
-                            <!-- Poster preview shown here -->
-                        </div>
-                    </div>`;
-                break;
-
-            case 'soccer-ball':
-                contentHtml = `
-                    <div class="photo-closeup-container">
-                        <h3>Worn Soccer Ball</h3>
-                        <p style="color:var(--text-muted); text-align:center; max-width:460px; font-size:0.9rem; line-height:1.5;">
-                            A slightly worn soccer ball resting on the floor. It looks like it hasn't been kicked in a while, perhaps because Sam doesn't have anyone to play with.
-                        </p>
-                    </div>`;
-                break;
-
-            case 'misplaced-graduation-album':
-                contentHtml = `
-                    <div class="photo-closeup-container" style="max-width:600px; margin:auto;">
-                        <h3 style="color:#ffd166; margin-bottom:20px; text-align:center; font-family:'Outfit';">Senior Yearbook - Class of 2020</h3>
-                        <div style="display:flex; gap:20px; justify-content:center; flex-wrap:wrap;">
-                            <!-- William K Page -->
-                            <div class="photo-matting" style="max-width:240px; border-radius:0; border:2px solid #ccc; background:#fbf9f6; padding:15px; text-align:center; flex:1; min-width:200px;">
-                                <h4 style="font-family:'Outfit'; margin-bottom:10px; font-size:0.9rem; color:#111;">William K.</h4>
-                                <div style="width:120px; height:140px; background-image: url('william.png'); background-size: cover; background-position: center; margin:10px auto; border:1px solid #ccc; position:relative;">
-                                    <div style="position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(230,57,70,0.15); pointer-events:none;"></div>
-                                </div>
-                                <p style="font-size:0.8rem; font-style:italic; color:#555; border-bottom:1px solid #ddd; padding-bottom:10px; min-height:40px; display:flex; align-items:center; justify-content:center; margin:0;">
-                                    "Always win. Fear is a motivator."
-                                </p>
-                                <h2 style="font-family:'Architects Daughter'; color:#e63946; margin-top:10px; transform:rotate(-7deg); font-size:1.6rem; margin-bottom:0; font-weight:bold; letter-spacing:2px;">LOSER</h2>
-                            </div>
-                            <!-- Samrudh Sharma Page -->
-                            <div class="photo-matting" style="max-width:240px; border-radius:0; border:2px solid #ccc; background:#fbf9f6; padding:15px; text-align:center; flex:1; min-width:200px;">
-                                <h4 style="font-family:'Outfit'; margin-bottom:10px; font-size:0.9rem; color:#111;">Samrudh Sharma</h4>
-                                <div style="width:120px; height:140px; background-image: url('sam_15.png'); background-size: cover; background-position: center; margin:10px auto; border:1px solid #ccc;"></div>
-                                <p style="font-size:0.8rem; font-style:italic; color:#555; border-bottom:1px solid #ddd; padding-bottom:10px; min-height:40px; display:flex; align-items:center; justify-content:center; margin:0;">
-                                    "Silence is the loudest answer."
-                                </p>
-                                <div style="font-size:0.75rem; color:#e63946; font-weight:bold; margin-top:10px; font-family:'Outfit';">
-                                    Vote: "Most likely to disappear"
-                                </div>
-                            </div>
-                        </div>
-                        <p style="text-align:center; color:var(--text-muted); max-width:500px; font-size:0.9rem; line-height:1.6; margin:15px auto 0 auto;">
-                            A high school graduation yearbook from the year 2020. The layout displays Samrudh's profile side-by-side with William K. While Sam has angrily crossed out William's profile with 'LOSER', Sam's profile is defaced with a cruel vote calling him 'Most likely to disappear'.
-                        </p>
-                    </div>`;
-                break;
-
-            // ==================== ROOM 3 (AGE 15, 2020) ====================
-            case 'bookshelf-cupboard':
-                contentHtml = `
-                    <div class="cupboard-explorer-layout">
-                        <h3>Sam's Bookshelf</h3>
-                        <p style="color:var(--text-muted); font-size:0.85rem;">
-                            Click on a book to read an excerpt or browse inside.
-                        </p>
-                        <div class="cupboard-books-row">
-                            <div class="shelf-book-item outsiders" data-book="outsiders">
-                                <h5>The Outsiders</h5>
-                                <span style="font-size:0.65rem; opacity:0.8; text-align:center;">S.E. Hinton</span>
-                            </div>
-                            <div class="shelf-book-item astronomy" data-book="astronomy">
-                                <h5>Astronomy</h5>
-                                <span style="font-size:0.65rem; opacity:0.8; text-align:center;">Atlas of Stars</span>
-                            </div>
-                            <div class="shelf-book-item yearbook" data-book="yearbook">
-                                <h5>Graduation Album</h5>
-                                <span style="font-size:0.65rem; opacity:0.8; text-align:center;">Class of 2020</span>
-                            </div>
-                            <div class="shelf-book-item journal" data-book="journal">
-                                <h5>Private Journal</h5>
-                                <span style="font-size:0.65rem; opacity:0.8; text-align:center; color:#e76f51;">Do Not Open</span>
-                            </div>
-                        </div>
-                        <div id="cupboard-detail-view" style="margin-top:20px; width:100%;">
-                            <!-- Loaded dynamically -->
-                        </div>
-                    </div>`;
-                break;
-
-            case 'unsent-letter':
-                contentHtml = `
-                    <div class="handwritten-letter-container">
-                        <div class="letter-sheet age-15-style">
-                            <p style="margin-bottom:15px; font-style:italic;">Dear Mum and Dad,</p>
-                            <p style="margin-bottom:15px;">
-                                I hope your trip to London is going well. Mrs. Patel said you might be gone for another month.
-                            </p>
-                            <p style="margin-bottom:15px;">
-                                The weather here has been very cold. I finished my school exams yesterday. I got top grades again. Mrs. Patel signed my slip, but I left it on your study desk in case you want to see.
-                            </p>
-                            <p style="margin-bottom:15px;">
-                                Could you... maybe come home next weekend? It has been very quiet here. I can cook dinner. You don't have to bring any gifts this time. I just want to see you.
-                            </p>
-                            <p style="margin-bottom:15px;">
-                                Please come home.
-                            </p>
-                            <p style="text-align:right;">Your son,<br>— Samrudh</p>
-                        </div>
-                        <p style="text-align:center; color:var(--text-muted); max-width:460px; font-size:0.85rem; line-height:1.4;">
-                            A heart-breakingly polite letter found tucked away in a desk drawer. It was never folded, never put in an envelope, and never sent.
-                        </p>
-                    </div>`;
-                break;
-
-            case 'photo-buddy-15':
-                contentHtml = `
-                    <div class="photo-closeup-container">
-                        <div class="photo-matting" style="filter: saturate(0.2) sepia(0.3); max-width:320px;">
-                            <img src="buddy.png" alt="Faded Buddy corgi photo">
-                        </div>
-                        <div style="background:#fff8eb; color:#222; font-family:'Architects Daughter'; font-size:1rem; padding:10px 20px; box-shadow:0 3px 6px rgba(0,0,0,0.1); border-radius:3px; margin-top:-20px; transform:rotate(2deg); width:200px; text-align:center;">
-                            "Miss you every day."
-                        </div>
-                        <p style="text-align:center; color:var(--text-muted); max-width:460px; font-size:0.9rem; line-height:1.6; margin-top:15px;">
-                            The original corgi photo frame from 2010 is present here on Sam's teenage desk in 2020, but the frame is worn and the photo has faded. A small handwritten sticky note is stuck to the edge. Buddy has passed away.
-                        </p>
-                    </div>`;
-                break;
-
-            case 'cassette-tape':
+            if (itemId === 'cassette-tape') {
+                cassetteSubtitles = data.subtitles || [];
                 cassettePlaying = false;
-                contentHtml = `
-                    <div class="audio-player-modal">
-                        <h3>Private Audio Cassette (2020)</h3>
-                        <p style="color:var(--text-muted); font-size:0.85rem; max-width:420px; line-height:1.4;">
-                            A USB drive cassette labelled "DO NOT PLAY" in heavy black marker. Click Play to listen to the tape recording.
-                        </p>
-                        <div class="cassette-body" id="cassette-body">
-                            <div class="cassette-label">
-                                <span style="font-weight:bold;">SAMRUDH — PRIVATE</span>
-                                <div class="cassette-reels">
-                                    <div class="reel"></div>
-                                    <div class="reel"></div>
-                                </div>
-                                <span style="text-align:right; font-size:0.65rem;">SIDE A</span>
-                            </div>
-                        </div>
-                        <button class="btn-primary" id="btn-play-cassette" style="width:140px;">Play Tape</button>
-                        <div class="player-status-message" id="cassette-subtitles">
-                            <!-- Monologue subtitles appear here -->
-                        </div>
-                    </div>`;
-                break;
+                const playBtn = document.getElementById('btn-play-cassette');
+                playBtn.addEventListener('click', toggleCassettePlay);
+            }
 
-            case 'photo-friends-15':
-                contentHtml = `
-                    <div class="photo-closeup-container">
-                        <div class="photo-matting">
-                            <svg viewBox="0 0 160 120" xmlns="http://www.w3.org/2000/svg">
-                                <rect width="160" height="120" fill="#ffd166" opacity="0.2"/>
-                                <image href="sam.png" x="65" y="25" width="30" height="36" />
-                                <circle cx="35" cy="50" r="12" fill="#ef476f" opacity="0.8"/>
-                                <circle cx="125" cy="50" r="12" fill="#118ab2" opacity="0.8"/>
-                            </svg>
-                            <div class="photo-caption" style="font-family:'Caveat';">First Real Friends — 2020</div>
-                        </div>
-                        <p style="text-align:center; color:var(--text-muted); max-width:460px; font-size:0.9rem; line-height:1.6; margin-top:15px;">
-                            A photo of Sam smiling widely with a small group of friends. This is the first photo across any room where Sam looks genuinely, unguardedly happy in the presence of other people.
-                        </p>
-                    </div>`;
-                break;
-
-
-            case 'photo-corgi-wall-15':
-                contentHtml = `
-                    <div class="photo-closeup-container">
-                        <div class="photo-matting" style="filter: sepia(0.6) saturate(0.2); max-width:320px;">
-                            <img src="buddy.png" alt="Buddy photo on wall">
-                            <div class="photo-caption">Buddy</div>
-                        </div>
-                        <p style="text-align:center; color:var(--text-muted); max-width:460px; font-size:0.9rem; line-height:1.6; margin-top:10px;">
-                            The faded original corgi photo frame from age 5, hanging on the wall.
-                        </p>
-                    </div>`;
-                break;
-
-            case 'chemistry-kit':
-                contentHtml = `
-                    <div class="photo-closeup-container">
-                        <h2 style="color:#d29e79; font-size:1.8rem; margin-bottom:15px; font-weight:500;">Chemistry Kit</h2>
-                        <p style="color:var(--text-muted); line-height:1.6; max-width:480px; text-align:center;">
-                            A dusty old chemistry kit. Sam was always fascinated by how things reacted together. It sparked a lifelong love for science.
-                        </p>
-                    </div>`;
-                break;
-
-            case 'rainy-window':
-                contentHtml = `
-                    <div class="photo-closeup-container">
-                        <div class="bedroom-window" style="position:static; width:280px; height:400px; transform:none; border: 8px solid #222;">
-                            <div class="window-glass">
-                                <div class="rain-drops"></div>
-                            </div>
-                            <div class="window-sill">
-                                <div class="dying-plant" style="bottom:10px;"></div>
-                            </div>
-                        </div>
-                        <p style="text-align:center; color:var(--text-muted); max-width:460px; font-size:0.9rem; line-height:1.6; margin-top:15px;">
-                            A gloomy, grey rainy day outside the window in 2020. A single dying plant sits on the windowsill—forgotten and unwatered.
-                        </p>
-                    </div>`;
-                break;
-
-            case 'wilted-plant':
-                contentHtml = `
-                    <div class="photo-closeup-container">
-                        <h3>Wilted Plant</h3>
-                        <p style="color:var(--text-muted); text-align:center; max-width:460px; font-size:0.9rem; line-height:1.5;">
-                            This plant used to be green and healthy. Now, it's dried out and drooping over the edge of the pot. It seems no one has watered it in months.
-                        </p>
-                    </div>`;
-                break;
-
-            case 'crayons-box':
-                contentHtml = `
-                    <div class="photo-closeup-container">
-                        <div class="photo-matting" style="max-width:240px; background:#fff; padding:15px; text-align:center;">
-                            <svg viewBox="0 0 100 120" style="width:120px; height:150px; margin: auto;">
-                                <!-- Box -->
-                                <rect x="15" y="30" width="70" height="80" rx="5" fill="#ffd166" stroke="#111" stroke-width="3"/>
-                                <!-- Crayons peeking out -->
-                                <path d="M25,30 L25,15 L32,15 L32,30" fill="#e63946" stroke="#111" stroke-width="2"/>
-                                <path d="M35,30 L35,10 L42,10 L42,30" fill="#2a9d8f" stroke="#111" stroke-width="2"/>
-                                <path d="M45,30 L45,18 L52,18 L52,30" fill="#118ab2" stroke="#111" stroke-width="2"/>
-                                <path d="M55,30 L55,12 L62,12 L62,30" fill="#f4a261" stroke="#111" stroke-width="2"/>
-                                <path d="M65,30 L65,20 L72,20 L72,30" fill="#e76f51" stroke="#111" stroke-width="2"/>
-                                <!-- Box Label -->
-                                <rect x="25" y="55" width="50" height="30" fill="#e63946" rx="2" stroke="#111" stroke-width="2"/>
-                                <text x="50" y="75" font-family="'Outfit'" font-size="12" fill="#fff" font-weight="bold" text-anchor="middle">CRAYONS</text>
-                            </svg>
-                            <div class="photo-caption">Crayon Box</div>
-                        </div>
-                        <p style="color:var(--text-muted); text-align:center; max-width:460px; font-size:0.9rem; line-height:1.5; margin-top:15px;">
-                            A box of colored crayons, most of which are broken or completely worn down. A sign of Sam's endless hours spent drawing and coloring alone in his room.
-                        </p>
-                    </div>`;
-                break;
-
-            case 'calendar-5':
-                contentHtml = `
-                    <div class="photo-closeup-container">
-                        <div class="photo-matting" style="max-width:240px; background:#fff; padding:15px; text-align:center;">
-                            <svg viewBox="0 0 100 100" style="width:140px; height:140px; margin: auto;">
-                                <!-- Calendar Board -->
-                                <rect x="10" y="10" width="80" height="80" rx="4" fill="#f8f9fa" stroke="#222" stroke-width="3"/>
-                                <rect x="10" y="10" width="80" height="25" fill="#e63946" rx="4" stroke="#222" stroke-width="3"/>
-                                <text x="50" y="27" font-family="'Outfit'" font-size="12" fill="#fff" font-weight="bold" text-anchor="middle">JUNE 2010</text>
-                                <!-- Grid -->
-                                <line x1="10" y1="50" x2="90" y2="50" stroke="#ccc" stroke-width="1"/>
-                                <line x1="10" y1="65" x2="90" y2="65" stroke="#ccc" stroke-width="1"/>
-                                <line x1="10" y1="80" x2="90" y2="80" stroke="#ccc" stroke-width="1"/>
-                                <line x1="30" y1="35" x2="30" y2="90" stroke="#ccc" stroke-width="1"/>
-                                <line x1="50" y1="35" x2="50" y2="90" stroke="#ccc" stroke-width="1"/>
-                                <line x1="70" y1="35" x2="70" y2="90" stroke="#ccc" stroke-width="1"/>
-                                <!-- Red Circle around the 6th -->
-                                <circle cx="40" cy="57" r="8" fill="none" stroke="#e63946" stroke-width="2"/>
-                                <text x="40" y="61" font-family="'Outfit'" font-size="10" fill="#e63946" font-weight="bold" text-anchor="middle">6</text>
-                            </svg>
-                            <div class="photo-caption">June 6, 2010</div>
-                        </div>
-                        <p style="color:var(--text-muted); text-align:center; max-width:460px; font-size:0.9rem; line-height:1.5; margin-top:15px;">
-                            A colorful wall calendar showing June 2010. June 6th (Sam's birthday) has a giant red circle, but there are no other notes, parties, or reminders written on any other day.
-                        </p>
-                    </div>`;
-                break;
-
-            case 'comic-books-10':
-                contentHtml = `
-                    <div class="photo-closeup-container" style="max-width:400px; margin:auto;">
-                        <div class="photo-matting" style="background:#fff; border:3px solid #111; padding:15px; box-shadow: 10px 10px 0 #111; text-align: center;">
-                            <div style="border:4px solid #111; padding:20px; background:#e63946; font-family:'Outfit'; text-align:center; position:relative; overflow:hidden;">
-                                <div style="background:#003049; color:#fff; border:3px solid #111; font-weight:bold; font-size:1.1rem; padding:5px 10px; transform:rotate(-2deg); display:inline-block; margin-bottom:15px; text-transform:uppercase; letter-spacing:1px;">
-                                    THE AMAZING SPIDER-MAN
-                                </div>
-                                <div style="width:100%; height:150px; border:3px solid #111; background:#000; margin-bottom:15px; display:flex; align-items:center; justify-content:center; margin: auto; position:relative;">
-                                    <!-- A spider web drawing -->
-                                    <svg viewBox="0 0 100 100" style="width:100px; height:100px;">
-                                        <line x1="50" y1="50" x2="10" y2="10" stroke="#fff" stroke-width="1"/>
-                                        <line x1="50" y1="50" x2="90" y2="10" stroke="#fff" stroke-width="1"/>
-                                        <line x1="50" y1="50" x2="90" y2="90" stroke="#fff" stroke-width="1"/>
-                                        <line x1="50" y1="50" x2="10" y2="90" stroke="#fff" stroke-width="1"/>
-                                        <line x1="50" y1="50" x2="50" y2="5" stroke="#fff" stroke-width="1"/>
-                                        <line x1="50" y1="50" x2="50" y2="95" stroke="#fff" stroke-width="1"/>
-                                        <line x1="50" y1="50" x2="5" y2="50" stroke="#fff" stroke-width="1"/>
-                                        <line x1="50" y1="50" x2="95" y2="50" stroke="#fff" stroke-width="1"/>
-                                        <!-- Spider -->
-                                        <circle cx="50" cy="50" r="4" fill="#e63946"/>
-                                    </svg>
-                                </div>
-                                <div style="font-size:0.9rem; color:#fff; font-weight:bold; border-top:2px solid #111; padding-top:10px;">
-                                    Marvel Comics &bull; #1 &bull; 1963
-                                </div>
-                                <div style="font-size:0.8rem; color:#ffd166; margin-top:5px; font-style:italic; line-height: 1.4;">
-                                    Writer: <strong>Stan Lee</strong><br>
-                                    Illustrator: <strong>Steve Ditko</strong>
-                                </div>
-                            </div>
-                        </div>
-                        <p style="text-align:center; color:var(--text-muted); font-size:0.9rem; line-height:1.5; margin-top:20px;">
-                            An iconic copy of "The Amazing Spider-Man" #1, written by Stan Lee and illustrated by Steve Ditko. It is one of Sam's most prized real-life comic treasures.
-                        </p>
-                    </div>`;
-                break;
-
-            case 'f1-magazine-10':
-                contentHtml = `
-                    <div class="photo-closeup-container">
-                        <div class="photo-matting" style="max-width:240px; background:#fff; padding:15px; text-align:center;">
-                            <svg viewBox="0 0 100 120" style="width:120px; height:150px; margin: auto;">
-                                <rect x="5" y="5" width="90" height="110" rx="4" fill="#003566" stroke="#111" stroke-width="3"/>
-                                <text x="50" y="30" font-family="'Outfit'" font-size="12" fill="#ffd166" font-weight="bold" text-anchor="middle">SPEED F1</text>
-                                <rect x="15" y="45" width="70" height="40" fill="#ffd166" rx="2" stroke="#111" stroke-width="2"/>
-                                <path d="M20,70 Q50,55 80,70 L80,80 L20,80 Z" fill="#e63946" stroke="#111" stroke-width="1.5"/>
-                                <circle cx="35" cy="78" r="6" fill="#000"/>
-                                <circle cx="65" cy="78" r="6" fill="#000"/>
-                                <text x="50" y="105" font-family="'Outfit'" font-size="9" fill="#fff" font-weight="bold" text-anchor="middle">2015 SEASON</text>
-                            </svg>
-                            <div class="photo-caption">F1 Magazine 2015</div>
-                        </div>
-                        <p style="color:var(--text-muted); text-align:center; max-width:460px; font-size:0.9rem; line-height:1.5; margin-top:15px;">
-                            A Formula 1 racing magazine from 2015. There's a highlighted article about champion drivers and their speed. Sam dreamed of racing cars to escape his quiet life.
-                        </p>
-                    </div>`;
-                break;
-
-            case 'gown-15':
-                contentHtml = `
-                    <div class="photo-closeup-container">
-                        <div class="photo-matting" style="max-width:240px; background:#fff; padding:15px; text-align:center;">
-                            <svg viewBox="0 0 100 120" style="width:120px; height:150px; margin: auto;">
-                                <!-- Gown -->
-                                <path d="M30,40 L20,110 L80,110 L70,40 Z" fill="#001845" stroke="#111" stroke-width="2"/>
-                                <path d="M48,40 L48,110" stroke="#ffd166" stroke-width="2"/>
-                                <!-- Cap -->
-                                <polygon points="50,15 80,25 50,35 20,25" fill="#001845" stroke="#111" stroke-width="2"/>
-                                <rect x="42" y="27" width="16" height="10" fill="#001845" stroke="#111" stroke-width="1"/>
-                                <path d="M50,25 Q65,25 75,45" fill="none" stroke="#ffd166" stroke-width="1.5"/>
-                            </svg>
-                            <div class="photo-caption">Cap & Gown</div>
-                        </div>
-                        <p style="color:var(--text-muted); text-align:center; max-width:460px; font-size:0.9rem; line-height:1.5; margin-top:15px;">
-                            A graduation cap and gown hanging on the door. It symbolizes the completion of high school, yet it feels heavy with the knowledge that his parents might not make it to the ceremony.
-                        </p>
-                    </div>`;
-                break;
-
-            case 'college-form-15':
-                contentHtml = `
-                    <div class="photo-closeup-container">
-                        <div class="photo-matting" style="max-width:240px; background:#fff; padding:15px; text-align:center;">
-                            <svg viewBox="0 0 100 125" style="width:120px; height:150px; margin: auto;">
-                                <rect x="5" y="5" width="90" height="115" rx="3" fill="#fff" stroke="#111" stroke-width="2"/>
-                                <text x="50" y="25" font-family="'Outfit'" font-size="9" fill="#111" font-weight="bold" text-anchor="middle">COLLEGE ADMISSION</text>
-                                <line x1="15" y1="40" x2="85" y2="40" stroke="#aaa" stroke-width="1.5"/>
-                                <line x1="15" y1="55" x2="85" y2="55" stroke="#aaa" stroke-width="1.5"/>
-                                <line x1="15" y1="70" x2="60" y2="70" stroke="#aaa" stroke-width="1.5"/>
-                                <!-- Official Seal -->
-                                <circle cx="75" cy="85" r="10" fill="none" stroke="#2a9d8f" stroke-width="2"/>
-                                <circle cx="75" cy="85" r="7" fill="#2a9d8f" opacity="0.3"/>
-                                <text x="75" y="88" font-family="'Outfit'" font-size="8" fill="#2a9d8f" font-weight="bold" text-anchor="middle">APPROVED</text>
-                                <!-- Blank Signature line -->
-                                <line x1="15" y1="105" x2="60" y2="105" stroke="#e63946" stroke-width="1.5"/>
-                                <text x="15" y="115" font-family="'Outfit'" font-size="7" fill="#e63946">Parent Signature (BLANK)</text>
-                            </svg>
-                            <div class="photo-caption">Application Form</div>
-                        </div>
-                        <p style="color:var(--text-muted); text-align:center; max-width:460px; font-size:0.9rem; line-height:1.5; margin-top:15px;">
-                            Official college application forms and SAT prep guidelines. Sam filled out his personal and academic details in neat print, but the guardian financial signature line is still blank.
-                        </p>
-                    </div>`;
-                break;
-
-            case 'netflix-15':
-                contentHtml = `
-                    <div class="photo-closeup-container">
-                        <div class="photo-matting" style="max-width:300px; background:#fff; padding:15px; text-align:center;">
-                            <svg viewBox="0 0 140 90" style="width:180px; height:120px; margin: auto; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.2));">
-                                <rect x="5" y="5" width="130" height="80" rx="6" fill="#222" stroke="#111" stroke-width="3"/>
-                                <rect x="10" y="10" width="120" height="70" fill="#111"/>
-                                <!-- F1 Car shape on screen -->
-                                <rect x="30" y="45" width="80" height="15" fill="#e63946" rx="3"/>
-                                <circle cx="45" cy="60" r="10" fill="#000"/>
-                                <circle cx="95" cy="60" r="10" fill="#000"/>
-                                <!-- Netflix Logo -->
-                                <text x="25" y="25" font-family="'Outfit', sans-serif" font-size="12" fill="#e50914" font-weight="bold">N</text>
-                            </svg>
-                            <div class="photo-caption">F1 Stream</div>
-                        </div>
-                        <p style="color:var(--text-muted); text-align:center; max-width:460px; font-size:0.9rem; line-height:1.5; margin-top:15px;">
-                            A tablet showing the Netflix app. It's paused on an F1 documentary series. The smudged screen indicates it is Sam's constant source of entertainment in the dark room.
-                        </p>
-                    </div>`;
-                break;
-
-            case 'broken-skateboard-15':
-                contentHtml = `
-                    <div class="photo-closeup-container">
-                        <div class="photo-matting" style="max-width:240px; background:#fff; padding:15px; text-align:center;">
-                            <svg viewBox="0 0 100 120" style="width:120px; height:150px; margin: auto;">
-                                <!-- Left half -->
-                                <g transform="rotate(-15 30 50)">
-                                    <rect x="25" y="10" width="15" height="50" rx="6" fill="#f4a261" stroke="#111" stroke-width="2"/>
-                                    <circle cx="32" cy="20" r="4" fill="#222"/>
-                                    <circle cx="32" cy="45" r="4" fill="#222"/>
-                                </g>
-                                <!-- Right half -->
-                                <g transform="rotate(15 70 70)">
-                                    <rect x="55" y="40" width="15" height="50" rx="6" fill="#f4a261" stroke="#111" stroke-width="2"/>
-                                    <circle cx="62" cy="50" r="4" fill="#222"/>
-                                    <circle cx="62" cy="75" r="4" fill="#222"/>
-                                </g>
-                            </svg>
-                            <div class="photo-caption">Broken Board</div>
-                        </div>
-                        <p style="color:var(--text-muted); text-align:center; max-width:460px; font-size:0.9rem; line-height:1.5; margin-top:15px;">
-                            A skateboard split in half near the trucks. The deck has scratches and stickers of F1 teams. A painful reminder of the day Sam fell while trying to ride fast and clear his mind.
-                        </p>
-                    </div>`;
-                break;
-
-            case 'awards-15':
-                contentHtml = `
-                    <div class="photo-closeup-container">
-                        <div class="photo-matting" style="max-width:240px; background:#fff; padding:15px; text-align:center;">
-                            <svg viewBox="0 0 100 100" style="width:140px; height:140px; margin: auto;">
-                                <!-- Trophy -->
-                                <path d="M35,30 L65,30 L60,60 L40,60 Z" fill="#ffd166" stroke="#111" stroke-width="2"/>
-                                <path d="M45,60 L45,80 L35,80 L35,85 L65,85 L65,80 L55,80 L55,60" fill="#ffd166" stroke="#111" stroke-width="2"/>
-                                <!-- Handles -->
-                                <path d="M35,35 Q25,45 40,50" fill="none" stroke="#ffd166" stroke-width="2"/>
-                                <path d="M65,35 Q75,45 60,50" fill="none" stroke="#ffd166" stroke-width="2"/>
-                            </svg>
-                            <div class="photo-caption">1st Place Science Award</div>
-                        </div>
-                        <p style="color:var(--text-muted); text-align:center; max-width:460px; font-size:0.9rem; line-height:1.5; margin-top:15px;">
-                            Trophies and certificate folders for academic excellence. They represent cold validation of his intelligence, yet offer no real warmth or emotional comfort.
-                        </p>
-                    </div>`;
-                break;
-
-            case 'research-paper-15':
-                contentHtml = `
-                    <div class="document-view-container">
-                        <div class="report-card-sheet" style="font-family:'Outfit'; max-width:520px; padding:20px; text-align:left;">
-                            <h3 style="color:#2a9d8f; border-bottom-color:#2a9d8f; font-size:1.3rem;">International Journal of Polymer Chemistry</h3>
-                            <p style="font-size:0.8rem; color:#666; margin: 5px 0;">Published: January 2020</p>
-                            <p style="font-size:0.9rem; line-height:1.5; font-weight:500; margin: 10px 0;">
-                                <strong>Title:</strong> Synthesis of Self-Healing Conductive Elastomers for Advanced Sensory Neural Interfaces<br>
-                                <strong>Authors:</strong> Dr. H. Vance, Samrudh Sharma (Co-Author)
-                            </p>
-                            <p style="font-size:0.82rem; line-height:1.5; color:#333; border:1px solid #ddd; padding:12px; background:#fafafa; font-style:italic; margin: 10px 0;">
-                                "...The cross-linked supramolecular network exhibited 98% autonomic healing efficiency at room temperature within 2 hours. By incorporating functionalized carbon nanotubes, electrical conductivity is maintained during mechanical elongation, laying the foundation for future cognitive-neural prosthetics..."
-                            </p>
-                            <div style="border-top:1px dashed #ccc; margin-top:15px; padding-top:15px; font-size:0.82rem; color:#555;">
-                                <strong style="color:#2a9d8f;">Advisor's Handwritten Note:</strong><br>
-                                <span style="font-family:'Caveat', cursive; font-size:1.2rem; color:#e76f51;">"Samrudh, your contribution to this breakthrough was indispensable. The academic board was stunned. You have a massive future in neural engineering. Keep pushing. — H.V."</span>
-                            </div>
-                        </div>
-                    </div>`;
-                break;
-
-            case 'f1-poster-15':
-                contentHtml = `
-                    <div class="photo-closeup-container">
-                        <div class="photo-matting" style="max-width:320px; background:#fff; padding:10px; border: 2px solid #ccc; text-align: center; margin: auto;">
-                            <img src="vettel.png" alt="Sebastian Vettel 2010 Champion" style="width: 100%; height: auto; border-radius: 4px;">
-                            <div class="photo-caption" style="font-family:'Outfit'; font-weight: bold; margin-top: 10px; color:#111;">Sebastian Vettel — 2010 Champion</div>
-                        </div>
-                        <p style="color:var(--text-muted); text-align:center; max-width:460px; font-size:0.9rem; line-height:1.5; margin-top:15px;">
-                            A glossy poster of Sebastian Vettel celebrating his iconic 2010 championship win. The text "Finger Point of Victory" is printed alongside stats of his youngest-ever championship run, serving as Sam's quiet inspiration.
-                        </p>
-                    </div>`;
-                break;
-
-            case 'herobrine-poster':
-                contentHtml = `
-                    <div class="photo-closeup-container">
-                        <div class="photo-matting" style="max-width:320px; background:#fff; padding:10px; border: 2px solid #ccc; text-align: center; margin: auto;">
-                            <img src="herobrine.png" alt="Herobrine Poster" style="width: 100%; height: auto; border-radius: 4px;">
-                            <div class="photo-caption" style="font-family:'Outfit'; font-weight: bold; margin-top: 10px; color:#111;">Herobrine Poster</div>
-                        </div>
-                        <p style="color:var(--text-muted); text-align:center; max-width:460px; font-size:0.9rem; line-height:1.5; margin-top:15px;">
-                            An eerie poster of Herobrine surrounded by TNT. Sam got this poster in 2015 during his obsession with Minecraft creepypastas.
-                        </p>
-                    </div>`;
-                break;
-
-            case 'misplaced-drawing':
-                contentHtml = `
-                    <div class="crayon-drawing-closeup">
-                        <div class="photo-matting" style="max-width:320px; background:#fff; padding:10px; border: 2px solid #ccc; text-align: center; margin: auto;">
-                            <img src="family_drawing.png" alt="Crayon Drawing (Age 5)" style="width: 100%; height: auto; border-radius: 4px;">
-                            <div class="photo-caption" style="font-family:'Outfit'; font-weight: bold; margin-top: 10px; color:#111;">My Family (Age 5)</div>
-                        </div>
-                        <p style="text-align:center; color:var(--text-muted); max-width:460px; font-size:0.9rem; line-height:1.6; margin-top:15px;">
-                            A crayon drawing of a family of four—mother, father, child, and a dog—drawn by a 5-year-old Sam.
-                        </p>
-                    </div>`;
-                break;
-
-            case 'misplaced-gift':
-                contentHtml = `
-                    <div class="document-view-container">
-                        <div class="report-card-sheet" style="font-family:'Outfit'; max-width:500px; transform:rotate(1deg); background:#fff0f3; border-color:#ffccd5; padding: 20px;">
-                            <h3 style="color:#ff4d6d; border-bottom-color:#ffccd5; text-align:center; margin-bottom: 15px;">Happy 5th Birthday, Sam!</h3>
-                            <p style="font-size:0.95rem; line-height:1.6; color:#5c1a27; padding:10px;">
-                                "Dear Samrudh,<br>
-                                We are so sorry we couldn't fly back for your 5th birthday. The business meetings ran late. We hope you like this gift. Nanny will help you open it.<br><br>
-                                With love,<br>
-                                Mom & Dad"
-                            </p>
-                            <div style="font-size:0.85rem; color:#ff4d6d; text-align:center; border-top:1px dashed #ffccd5; padding-top:10px; margin-top:10px;">
-                                The gift box remains taped shut. It was never opened.
-                            </div>
-                        </div>
-                    </div>`;
-                break;
-
-            case 'misplaced-block':
-                contentHtml = `
-                    <div class="photo-closeup-container">
-                        <div class="photo-matting" style="max-width:320px; background:#fff; padding: 20px; text-align: center;">
-                            <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="width: 150px; height: 150px;">
-                                <rect x="10" y="10" width="80" height="80" rx="10" fill="#ffd166" stroke="#f4a261" stroke-width="4"/>
-                                <text x="50" y="70" font-family="'Outfit'" font-size="60" fill="#ffffff" font-weight="bold" text-anchor="middle" stroke="#e76f51" stroke-width="2">S</text>
-                            </svg>
-                            <div class="photo-caption">Alphabet Block 'S'</div>
-                        </div>
-                        <p style="text-align:center; color:var(--text-muted); max-width:460px; font-size:0.9rem; line-height:1.6; margin-top: 15px;">
-                            A heavy, worn wooden block with the letter 'S' painted in fading red. Sam used to build single towers with it, only to knock them down when no one was watching.
-                        </p>
-                    </div>`;
-                break;
-
-            case 'misplaced-apology':
-                contentHtml = `
-                    <div class="document-view-container">
-                        <div class="report-card-sheet" style="font-family:'Outfit'; max-width:500px; transform:rotate(-1deg); padding: 20px;">
-                            <h3 style="color:#2b2d42; border-bottom-color:#8d99ae; margin-bottom: 15px;">Sharma Executive Offices</h3>
-                            <p style="font-size:0.85rem; color:#8d99ae; margin-bottom:15px;">Date: June 7, 2015</p>
-                            <p style="font-size:0.95rem; line-height:1.6; color:#2b2d42;">
-                                "Sam,<br>
-                                I hope your birthday yesterday was alright. I have instructed the driver to deliver the gaming console you asked for. I cannot return from Dubai this week due to the merger proceedings. Study hard.<br><br>
-                                — Father"
-                            </p>
-                            <div style="font-size:0.8rem; color:#8d99ae; border-top:1px solid #e2e8f0; padding-top:10px; margin-top:20px; font-style:italic;">
-                                Written on thick company letterhead. No handwritten edits.
-                            </div>
-                        </div>
-                    </div>`;
-                break;
-
-            case 'misplaced-texts':
-                contentHtml = `
-                    <div class="computer-screen-experience" style="display:flex; flex-direction:column; gap:15px; font-family:sans-serif; background:#1e1e24; border: 2px solid #3a3a42; padding:20px; border-radius:12px; color:#eef1f6; width:100%; max-width:400px; margin:auto;">
-                        <div style="display:flex; justify-content:space-between; border-bottom:1px solid #3a3a42; padding-bottom:8px; font-size:0.9rem; font-weight:bold;">
-                            <span>Group Chat (Middle School)</span>
-                        </div>
-                        <div style="display:flex; flex-direction:column; gap:10px; font-size:0.9rem; text-align: left;">
-                            <div style="background:#2b2d42; padding:10px; border-radius:8px; align-self:flex-start; max-width:80%;">
-                                "Why is Samrudh always sitting alone?"
-                            </div>
-                            <div style="background:#c1121f; padding:10px; border-radius:8px; align-self:flex-end; max-width:80%; color:#fff;">
-                                "Because he has no friends and his parents don't even live here! Complete loser."
-                            </div>
-                            <div style="background:#2b2d42; padding:10px; border-radius:8px; align-self:flex-start; max-width:80%;">
-                                "He didn't even speak once during the group project."
-                            </div>
-                        </div>
-                        <div style="font-size:0.8rem; color:#8d99ae; text-align:center; margin-top:10px;">
-                            Received June 2015. Saved in screenshots.
-                        </div>
-                    </div>`;
-                break;
-
-            case 'misplaced-chemistry-kit':
-                contentHtml = `
-                    <div class="photo-closeup-container">
-                        <h2 style="color:#d29e79; font-size:1.8rem; margin-bottom:15px; font-weight:500;">Chemistry Kit</h2>
-                        <p style="color:var(--text-muted); line-height:1.6; max-width:480px; text-align:center;">
-                            A dusty old chemistry kit. Sam was always fascinated by how things reacted together. It sparked a lifelong love for science and research.
-                        </p>
-                    </div>`;
-                break;
-
-            case 'action-figures':
-                contentHtml = `
-                    <div class="photo-closeup-container">
-                        <div class="photo-matting" style="padding:0; background:none; border:none; box-shadow:none; max-width:300px;">
-                            <img src="action_figure_lore.png" alt="Battered Action Figures" style="width:100%; border-radius:8px; box-shadow: 0 4px 12px rgba(0,0,0,0.5);">
-                        </div>
-                        <p style="text-align:center; color:var(--text-muted); max-width:460px; font-size:0.9rem; line-height:1.6; margin-top:15px;">
-                            A couple of cheap, battered plastic action figures. One has its head twisted completely backwards, and both are covered in dark permanent marker scribbles. They look like they were the victims of a very violent imaginary war.
-                        </p>
-                    </div>`;
-                break;
-
-            case 'computer-15':
-                if (isComputerUnlocked) {
-                    contentHtml = getComputerUnlockedHtml();
-                } else {
-                    contentHtml = `
-                    <div class="computer-screen-experience" style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:20px; font-family:monospace; background:#0a0a0f; border: 2px solid #5e6b7d; padding:30px; border-radius:8px; box-shadow: inset 0 0 20px rgba(94,107,125,0.3); color:#8ea2c0; width:100%; max-width:540px; margin:auto;">
-                        <div style="display:flex; width:100%; justify-content:space-between; border-bottom:1px solid rgba(94,107,125,0.4); padding-bottom:8px; font-size:0.85rem;">
-                            <span>SYSTEM TERMINAL [AGE 15]</span>
-                            <span style="color:#e07a5f;">● LOCKED</span>
-                        </div>
-                        <div style="font-size:1.0rem; line-height:1.5; text-align:left; width:100%; min-height:140px; padding:10px 0; display:flex; flex-direction:column; gap:10px; width: 100%;">
-                            <span style="color:#5e6b7d;">> Loading memory diagnostics... done.</span>
-                            <span style="color:#5e6b7d;">> Searching for core character traits... [GLITCH FOUND]</span>
-                            <span style="color:#e07a5f;">> CRITICAL ERROR: Timeline mismatch detected. Memory recovery key is required.</span>
-                            
-                            <div style="margin-top: 15px; display: flex; flex-direction: column; gap: 8px; width: 100%;">
-                                <label for="comp-password-input" style="color: #ffd166; font-size: 0.85rem; font-weight: bold; letter-spacing: 1px;">ENTER RECOVERY PASSWORD:</label>
-                                <div style="display: flex; gap: 10px; width: 100%;">
-                                    <input type="password" id="comp-password-input" class="glass-select" placeholder="Password..." autocomplete="off" style="flex: 1; font-size: 1rem; padding: 8px; font-family: monospace; border-color: #5e6b7d; background: rgba(255,255,255,0.05); color: #fff; border-radius: 4px;">
-                                    <button id="btn-comp-unlock" class="btn-primary" style="padding: 8px 20px; font-size: 0.9rem; font-family: monospace; font-weight: bold; background: #5e6b7d; color: #fff; border: none; border-radius: 4px; cursor: pointer;">UNLOCK</button>
-                                </div>
-                                <div id="comp-error-msg" style="color: #e07a5f; font-size: 0.85rem; font-weight: bold; min-height: 20px; margin-top: 5px; text-align: center;"></div>
-                            </div>
-                        </div>
-                        <div style="width:100%; text-align:right; font-size:0.8rem; color:#5e6b7d; border-top: 1px solid rgba(94,107,125,0.2); padding-top:10px;">
-                            SYSTEM READY. ENTER PASSWORD TO RECOVER SAM.
-                        </div>
-                    </div>`;
-                }
-                break;
-
-            default:
-                contentHtml = `<h3>Unknown Item</h3><p>Could not expand item data.</p>`;
-        }
-        
-        closeupBody.innerHTML = contentHtml;
-        closeupModal.classList.add('active');
-
-        // Post-render binding hooks
-        if (itemId === 'picture-book') {
-            updatePictureBook();
-            document.getElementById('btn-prev-page').addEventListener('click', () => {
-                if (currentBookPage > 0) {
-                    currentBookPage--;
-                    updatePictureBook();
-                }
-            });
-            document.getElementById('btn-next-page').addEventListener('click', () => {
-                if (currentBookPage < pictureBookPages.length - 1) {
-                    currentBookPage++;
-                    updatePictureBook();
-                }
-            });
-        }
-
-        if (itemId === 'crt-tv-selection') {
-            updateTV();
-            document.querySelectorAll('.tv-btn-slot').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    const slot = e.currentTarget;
-                    const dvd = slot.dataset.dvd;
-                    document.querySelectorAll('.tv-btn-slot').forEach(b => b.classList.remove('playing'));
-                    slot.classList.add('playing');
-                    activeDvd = dvd;
-                    updateTV();
-                });
-            });
-        }
-
-        if (itemId === 'schoolbag') {
-            document.querySelectorAll('[data-bag-item]').forEach(card => {
-                card.addEventListener('click', (e) => {
-                    const target = e.currentTarget.dataset.bagItem;
-                    showSchoolbagItem(target);
-                });
-            });
-            showSchoolbagItem('note-bullying');
-        }
-
-        if (itemId === 'posters-collection') {
-            document.querySelectorAll('[data-poster-item]').forEach(card => {
-                card.addEventListener('click', (e) => {
-                    const target = e.currentTarget.dataset.posterItem;
-                    showPosterItem(target);
-                });
-            });
-            showPosterItem('minecraft');
-        }
-
-        if (itemId === 'bookshelf-cupboard') {
-            document.querySelectorAll('[data-book]').forEach(card => {
-                card.addEventListener('click', (e) => {
-                    const book = e.currentTarget.dataset.book;
-                    showCupboardBook(book);
-                });
-            });
-            showCupboardBook('yearbook');
-        }
-
-        if (itemId === 'cassette-tape') {
-            const playBtn = document.getElementById('btn-play-cassette');
-            playBtn.addEventListener('click', toggleCassettePlay);
-        }
-
-        if (itemId === 'computer-15') {
-            bindComputerInterface();
+            if (itemId === 'computer-15') {
+                bindComputerInterface();
+            }
+        } catch (err) {
+            console.error('Error opening closeup:', err);
         }
     }
 
@@ -2149,6 +1028,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!pagesWrapper) return;
         
         const data = pictureBookPages[currentBookPage];
+        if (!data) return;
         pagesWrapper.innerHTML = `
             <div class="book-page-side left-side">
                 <p>${data.left}</p>
@@ -2173,6 +1053,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const data = dvdVideos[activeDvd];
+        if (!data) return;
         
         tvScreen.innerHTML = `<div class="tv-static"></div><div style="position:absolute; top:20px; left:20px; font-family:monospace; color:#0f0;">LOADING DVD...</div>`;
 
@@ -2185,7 +1066,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="tv-gameplay-simulation" style="background:#0c0000; justify-content:space-between; padding:20px;">
                         <span style="font-family:monospace; color:#d90429; font-weight:bold; font-size:0.75rem; text-align:left; width:100%;">● REC [SECRET - 2015]</span>
                         <div style="font-size:0.9rem; line-height:1.5; color:#d90429; font-family:'Architects Daughter';">
-                            "Hey look! It's the Indian kid's lunch! Smells like garbage. Go back home, stinky Sam!"
+                            ${data.desc}
                         </div>
                         <span style="font-family:monospace; color:#d90429; font-size:0.7rem; width:100%; text-align:right;">00:14 / 00:45</span>
                     </div>
@@ -2215,6 +1096,38 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 1200);
     }
 
+    // 3. Schoolbag Items Explorer (2015)
+    function showSchoolbagItem(item) {
+        const detailView = document.getElementById('schoolbag-details-view');
+        if (!detailView) return;
+        detailView.innerHTML = schoolbagItems[item] || '';
+    }
+
+    // 4. Posters Explorer (Age 10)
+    function showPosterItem(item) {
+        const detailView = document.getElementById('poster-details-view');
+        if (!detailView) return;
+        detailView.innerHTML = posterItems[item] || '';
+    }
+
+    // 5. Bookshelf / Cupboard Books Explorer (2020)
+    function showCupboardBook(book) {
+        const detailView = document.getElementById('cupboard-detail-view');
+        if (!detailView) return;
+
+        if (book === 'yearbook') {
+            detailView.innerHTML = `
+                <div class="yearbook-layout">
+                    <div class="yearbook-index" id="yb-index"></div>
+                    <div class="yearbook-page-viewer" id="yb-viewer"></div>
+                </div>`;
+            populateYearbookIndex();
+            loadYearbookPage();
+        } else {
+            detailView.innerHTML = cupboardBooks[book] || '';
+        }
+    }
+
     function triggerBeep(freq, dur) {
         if (!audioCtx || isMuted) return;
         const now = audioCtx.currentTime;
@@ -2228,174 +1141,6 @@ document.addEventListener('DOMContentLoaded', () => {
         gain.connect(audioCtx.destination);
         osc.start(now);
         osc.stop(now + dur + 0.1);
-    }
-
-    // 3. Schoolbag Items Explorer (2015)
-    function showSchoolbagItem(item) {
-        const detailView = document.getElementById('schoolbag-details-view');
-        if (!detailView) return;
-
-        let itemHtml = '';
-        if (item === 'note-bullying') {
-            itemHtml = `
-                <div class="crumpled-note">
-                    <div class="crumpled-shatter"></div>
-                    <p style="margin-bottom:15px; font-weight:bold; font-size:1.15rem;">SHARMA'S SMELLY LUNCHBOX</p>
-                    <p style="margin-bottom:15px;">
-                        Why do you eat that garbage? It smells like rotting compost.<br>
-                        Eat real food like everyone else, or eat outside on the grass with the bugs.
-                    </p>
-                    <p style="text-align:right; font-weight:bold;">— Class 5B (2015)</p>
-                </div>`;
-        } else if (item === 'report-card') {
-            itemHtml = `
-                <div class="report-card-sheet">
-                    <h3>Report Card — St. Christopher Elementary</h3>
-                    <p style="margin-bottom:15px;"><strong>Student:</strong> Samrudh Sharma &nbsp;&nbsp;&nbsp;&nbsp; <strong>Grade:</strong> 5 (2015)</p>
-                    <table class="report-table">
-                        <thead>
-                            <tr><th>Subject</th><th>Grade</th><th>Comments</th></tr>
-                        </thead>
-                        <tbody>
-                            <tr><td>Mathematics</td><td>A+</td><td>Outstanding performance.</td></tr>
-                            <tr><td>English Language</td><td>A</td><td>Excellent reading comprehension.</td></tr>
-                            <tr><td>Social Studies</td><td>A</td><td>Thorough and dedicated work.</td></tr>
-                            <tr><td>Science & Tech</td><td>A+</td><td>Exceptional laboratory skill.</td></tr>
-                        </tbody>
-                    </table>
-                    <div class="report-signatures">
-                        <span>Parent Signature: <span style="font-family:'Caveat'; font-size:1.4rem; color:#555;">Mrs. Patel (Housekeeper)</span></span>
-                        <span>Date: June 2015</span>
-                    </div>
-                </div>`;
-        } else if (item === 'checklist-fitin') {
-            itemHtml = `
-                <div class="crumpled-note" style="background:#fefefe; border:1px solid #ccc; border-left: 5px solid #2a9d8f;">
-                    <p style="font-weight:bold; font-size:1.1rem; border-bottom:1px solid #ddd; padding-bottom:5px; margin-bottom:10px;">How to Fit In (Checklist)</p>
-                    <ul style="list-style:none; display:flex; flex-direction:column; gap:10px; font-family:'Architects Daughter'; font-size:0.95rem;">
-                        <li>[x] Do not pack traditional Indian food for lunch anymore. (Tell Mrs. Patel to make sandwiches).</li>
-                        <li>[x] Put up a football poster in the room. (Choose the local team).</li>
-                        <li>[ ] Talk louder during class breaks.</li>
-                        <li>[ ] Change spelling of my name to "Sam" so people can pronounce it easily.</li>
-                    </ul>
-                </div>`;
-        }
-
-        detailView.innerHTML = itemHtml;
-    }
-
-    // 4. Posters Explorer (Age 10)
-    function showPosterItem(item) {
-        const detailView = document.getElementById('poster-details-view');
-        if (!detailView) return;
-
-        let itemHtml = '';
-        if (item === 'minecraft') {
-            itemHtml = `
-                <div class="photo-matting" style="max-width:280px; transform:none; border-width:8px;">
-                    <svg viewBox="0 0 170 230" width="100%">
-                        <rect width="170" height="230" fill="#1b4332"/>
-                        <rect x="40" y="50" width="90" height="90" fill="#40916c"/>
-                        <rect x="55" y="65" width="20" height="20" fill="black"/>
-                        <rect x="95" y="65" width="20" height="20" fill="black"/>
-                        <rect x="75" y="85" width="20" height="35" fill="black"/>
-                        <rect x="65" y="105" width="40" height="25" fill="black"/>
-                    </svg>
-                    <div class="photo-caption" style="font-family:'Outfit'; font-size:0.95rem; font-weight:600;">Minecraft Creeper Poster</div>
-                </div>`;
-        } else if (item === 'football') {
-            itemHtml = `
-                <div class="photo-matting" style="max-width:280px; transform:none; border-width:8px;">
-                    <svg viewBox="0 0 170 230" width="100%">
-                        <rect width="170" height="230" fill="#0077b6"/>
-                        <circle cx="85" cy="115" r="45" fill="white"/>
-                        <circle cx="85" cy="115" r="40" fill="#03045e"/>
-                    </svg>
-                    <div class="photo-caption" style="font-family:'Outfit'; font-size:0.95rem; font-weight:600;">Football Team Poster</div>
-                </div>`;
-        } else if (item === 'buddy') {
-            itemHtml = `
-                <div class="photo-matting" style="max-width:280px; transform:none; border-width:8px;">
-                    <img src="buddy.png" alt="Buddy photo poster">
-                    <div class="photo-caption" style="font-family:'Caveat';">Buddy the Hero</div>
-                </div>`;
-        } else if (item === 'herobrine') {
-            itemHtml = `
-                <div class="photo-matting" style="max-width:280px; transform:none; border-width:8px;">
-                    <img src="herobrine.png" alt="Herobrine poster">
-                    <div class="photo-caption" style="font-family:'Outfit'; font-size:0.95rem; font-weight:600;">Herobrine Poster</div>
-                </div>`;
-        }
-
-        detailView.innerHTML = itemHtml;
-    }
-
-    // 5. Bookshelf / Cupboard Books Explorer (2020)
-    function showCupboardBook(book) {
-        const detailView = document.getElementById('cupboard-detail-view');
-        if (!detailView) return;
-
-        let bookHtml = '';
-        if (book === 'outsiders') {
-            bookHtml = `
-                <div class="handwritten-letter-container">
-                    <div class="letter-sheet age-15-style" style="border-left-color:#8c3d3d; font-family:'Outfit'; font-size:0.95rem;">
-                        <h4 style="margin-bottom:10px;">The Outsiders — Excerpt</h4>
-                        <p style="font-style:italic; line-height:1.6; color:#444;">
-                            "I lay there and wondered what in the world I was going to do. It was quiet in the room, except for the drip-drip of the rain outside... I had a sick feeling in my stomach and I was scared. It wasn't just being scared of the cops, either. It was... I don't know. Just a feeling that I didn't belong anywhere."
-                        </p>
-                        <p style="margin-top:15px; font-size:0.8rem; color:var(--text-muted);">
-                            Dog-eared page 48. Several lines are highlighted in yellow marker.
-                        </p>
-                    </div>
-                </div>`;
-        } else if (book === 'astronomy') {
-            bookHtml = `
-                <div class="handwritten-letter-container">
-                    <div class="letter-sheet age-15-style" style="border-left-color:#4a446c; font-family:'Outfit'; font-size:0.95rem;">
-                        <h4 style="margin-bottom:10px;">Astronomy Atlas: Void & Dark Matter</h4>
-                        <p style="font-style:italic; line-height:1.6; color:#444;">
-                            "Dark matter does not interact with electromagnetic force. It does not absorb, reflect, or emit light. It is completely invisible, detectable only by its gravitational influence on visible matter. It is a presence defined entirely by its silence..."
-                        </p>
-                        <p style="margin-top:15px; font-size:0.8rem; color:var(--text-muted);">
-                            Sam's handwriting in the margin: "Invisible is easier."
-                        </p>
-                    </div>
-                </div>`;
-        } else if (book === 'journal') {
-            bookHtml = `
-                <div class="handwritten-letter-container">
-                    <div class="letter-sheet" style="border-left-color:#e76f51;">
-                        <p style="font-weight:bold; margin-bottom:10px; font-size:1.4rem;">Oct 12 — Midnight (2020)</p>
-                        <p style="margin-bottom:15px;">
-                            They didn't come back again. Mrs. Patel said they had to fly to Tokyo. They forgot my high school graduation was today.
-                        </p>
-                        <p style="margin-bottom:15px;">
-                            William scribbled hate remarks on my yearbook locker. No one did anything. Everyone just watched and laughed quietly, including Kanye West who turned away.
-                        </p>
-                        <p style="font-weight:bold; color:#b32a2a;">
-                            I spent the day alone in this empty room. Sometimes I feel like a ghost in my own house. I just want to finish school and escape this town.
-                        </p>
-                    </div>
-                </div>`;
-        } else if (book === 'yearbook') {
-            bookHtml = `
-                <div class="yearbook-layout">
-                    <div class="yearbook-index" id="yb-index">
-                        <!-- Populated dynamically -->
-                    </div>
-                    <div class="yearbook-page-viewer" id="yb-viewer">
-                        <!-- Loaded dynamically -->
-                    </div>
-                </div>`;
-        }
-
-        detailView.innerHTML = bookHtml;
-
-        if (book === 'yearbook') {
-            populateYearbookIndex();
-            loadYearbookPage();
-        }
     }
 
     // 6. Yearbook A-Z Page Viewer
@@ -2558,39 +1303,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function getComputerUnlockedHtml() {
-        return `
-            <div class="computer-screen-experience" style="display:flex; flex-direction:column; font-family:monospace; background:#0a0a0f; border: 2px solid #2a9d8f; padding:25px; border-radius:8px; box-shadow: inset 0 0 20px rgba(42,157,143,0.3); color:#8ea2c0; width:100%; max-width:600px; min-height:380px; margin:auto; box-sizing:border-box;">
-                <div style="display:flex; width:100%; justify-content:space-between; border-bottom:1px solid rgba(42,157,143,0.4); padding-bottom:8px; font-size:0.85rem; margin-bottom:15px;">
-                    <span>SYSTEM DESKTOP [UNLOCKED]</span>
-                    <span style="color:#2ecc71;">● ONLINE</span>
-                </div>
-                <div style="display:flex; gap:15px; flex:1; min-height:260px;">
-                    <!-- Sidebar list of files -->
-                    <div style="width:35%; border-right:1px solid rgba(42,157,143,0.2); padding-right:10px; display:flex; flex-direction:column; gap:8px;">
-                        <span style="color:#2a9d8f; font-weight:bold; font-size:0.8rem; margin-bottom:5px;">FILES DIRECTORY:</span>
-                        <div class="comp-file-item" data-file="therapy" style="padding:6px; cursor:pointer; background:rgba(255,255,255,0.05); border-radius:4px; font-size:0.8rem; border:1px solid transparent; text-align:left;">
-                            📄 therapy_session.log
-                        </div>
-                        <div class="comp-file-item" data-file="timeline" style="padding:6px; cursor:pointer; background:rgba(255,255,255,0.05); border-radius:4px; font-size:0.8rem; border:1px solid transparent; text-align:left;">
-                            📄 timeline_data.dat
-                        </div>
-                        <div class="comp-file-item" data-file="medical" style="padding:6px; cursor:pointer; background:rgba(255,255,255,0.05); border-radius:4px; font-size:0.8rem; border:1px solid transparent; text-align:left;">
-                            📄 diagnosis_rpt.pdf
-                        </div>
-                        <div class="comp-file-item" data-file="future" style="padding:6px; cursor:pointer; background:rgba(255,255,255,0.02); opacity:0.6; border-radius:4px; font-size:0.8rem; color:#e07a5f; text-align:left;" title="Encrypted / Locked">
-                            🔒 future_mem.enc
-                        </div>
-                    </div>
-                    <!-- File Content Display -->
-                    <div id="comp-file-viewer" style="width:65%; padding-left:10px; font-size:0.85rem; line-height:1.4; color:#fff; display:flex; flex-direction:column; justify-content:center; align-items:center; border:1px dashed rgba(42,157,143,0.2); border-radius:4px; padding:15px; background:rgba(0,0,0,0.2); box-sizing:border-box; overflow-y:auto; max-height:260px;">
-                        <span style="color:#2a9d8f; font-size:1.5rem; margin-bottom:10px;">💾</span>
-                        <span style="color:#8ea2c0; text-align:center;">Select a memory file from the left panel to decrypt and view Sam's core memory fragment.</span>
-                    </div>
-                </div>
-            </div>`;
-    }
-
     function bindComputerInterface() {
         if (isComputerUnlocked) {
             // Bind file item clicks
@@ -2635,46 +1347,50 @@ document.addEventListener('DOMContentLoaded', () => {
                 const fileKey = item.dataset.file;
                 if (fileKey && fileContents[fileKey]) {
                     item.addEventListener('click', () => {
-                        // Highlight active
                         fileItems.forEach(i => i.style.background = 'rgba(255,255,255,0.05)');
                         item.style.background = 'rgba(42, 157, 143, 0.2)';
-                        
                         fileViewer.innerHTML = fileContents[fileKey];
                     });
                 }
             });
             
         } else {
-            // Bind password submission
             const pInput = document.getElementById('comp-password-input');
             const btnUnlock = document.getElementById('btn-comp-unlock');
             const errMsg = document.getElementById('comp-error-msg');
             
-            const attemptUnlock = () => {
+            const attemptUnlock = async () => {
                 const pwd = pInput.value.trim().toLowerCase();
-                if (pwd === 'interest') {
-                    errMsg.style.color = '#2ecc71';
-                    errMsg.textContent = 'ACCESS GRANTED. DECRYPTING MEMORIES...';
-                    triggerBeep(880, 0.15);
-                    setTimeout(() => {
-                        triggerBeep(1200, 0.2);
-                    }, 150);
+                try {
+                    const response = await fetch('/api/verify-computer-password', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ password: pwd })
+                    });
+                    const data = await response.json();
                     
-                    setTimeout(() => {
-                        isComputerUnlocked = true;
-                        // Reload the popup contents
-                        const closeupBody = document.getElementById('closeup-body');
-                        if (closeupBody) {
-                            closeupBody.innerHTML = getComputerUnlockedHtml();
-                            bindComputerInterface();
-                        }
-                    }, 1200);
-                } else {
-                    errMsg.style.color = '#e07a5f';
-                    errMsg.textContent = 'ACCESS DENIED. INVALID PASSWORD.';
-                    pInput.classList.add('error-shake');
-                    setTimeout(() => pInput.classList.remove('error-shake'), 400);
-                    triggerBeep(150, 0.3);
+                    if (data.success) {
+                        errMsg.style.color = '#2ecc71';
+                        errMsg.textContent = 'ACCESS GRANTED. DECRYPTING MEMORIES...';
+                        triggerBeep(880, 0.15);
+                        setTimeout(() => {
+                            triggerBeep(1200, 0.2);
+                        }, 150);
+                        
+                        setTimeout(() => {
+                            isComputerUnlocked = true;
+                            openCloseup('computer-15');
+                        }, 1200);
+                    } else {
+                        errMsg.style.color = '#e07a5f';
+                        errMsg.textContent = 'ACCESS DENIED. INVALID PASSWORD.';
+                        pInput.classList.add('error-shake');
+                        setTimeout(() => pInput.classList.remove('error-shake'), 400);
+                        triggerBeep(150, 0.3);
+                    }
+                } catch(e) {
+                    console.error(e);
+                    errMsg.textContent = 'Error communicating with server.';
                 }
             };
             
@@ -2688,4 +1404,18 @@ document.addEventListener('DOMContentLoaded', () => {
             pInput.focus();
         }
     }
+
+    // --- DevTools deterrents ---
+    document.addEventListener('contextmenu', e => e.preventDefault());
+    document.addEventListener('keydown', e => {
+        if (e.key === 'F12') {
+            e.preventDefault();
+        }
+        if (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C')) {
+            e.preventDefault();
+        }
+        if (e.ctrlKey && e.key === 'u') {
+            e.preventDefault();
+        }
+    });
 });

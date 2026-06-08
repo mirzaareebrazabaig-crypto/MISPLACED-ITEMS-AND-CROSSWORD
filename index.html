@@ -10,6 +10,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Caveat:wght@400;700&family=Architects+Daughter&family=Reenie+Beanie&display=swap" rel="stylesheet">
     <!-- Style Layer -->
     <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="crossword.css">
+    <!-- Typewriter typography for crossword -->
+    <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400;1,700&family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Special+Elite&display=swap" rel="stylesheet">
 </head>
 <body>
     <!-- App Container -->
@@ -69,7 +72,7 @@
 
         <!-- Sleek Header Navigation -->
         <header id="app-header">
-            <h1><span id="room-age-indicator">Age 5</span> Sam's Bedroom</h1>
+            <h1><span id="room-age-indicator">Age 5</span> <span id="app-header-title">Sam&#39;s Bedroom</span></h1>
             <nav class="timeline-tabs">
                 <button class="timeline-tab active" data-age="5">
                     <span class="tab-dot"></span> 2010 (Age 5)
@@ -85,6 +88,12 @@
                 <button id="btn-finish-game" class="control-btn" aria-label="Lock In Answers" title="Finish and Calculate Score">
                     <span class="btn-text" style="color: #ffd166; font-weight: bold;">Lock In Answers</span>
                 </button>
+                <button id="btn-header-rooms" class="control-btn" style="display: none;" title="Go back to exploring rooms">
+                    <span class="btn-text">🛏️ Explore Bedroom</span>
+                </button>
+                <button id="btn-header-crossword" class="control-btn" style="display: none;" title="Go to memory crossword">
+                    <span class="btn-text" style="color: #ffd166; font-weight: bold;">🧩 Memory Crossword</span>
+                </button>
                 <button id="btn-audio-toggle" class="control-btn" aria-label="Toggle Audio" title="Mute/Unmute Audio">
                     <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
                         <path d="M12 3v18c-4.97 0-9-4.03-9-9s4.03-9 9-9zm4 9c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
@@ -96,6 +105,16 @@
                 </button>
             </div>
         </header>
+
+        <!-- Primary Mode Navigation Tabs -->
+        <div id="game-mode-nav" class="mode-navigation-bar" style="display: none;">
+            <button id="btn-mode-rooms" class="mode-nav-btn active">
+                <span class="mode-nav-icon">🛏️</span> 1. Explore Bedroom
+            </button>
+            <button id="btn-mode-crossword" class="mode-nav-btn" disabled>
+                <span class="mode-nav-icon">🔒</span> 2. Memory Crossword
+            </button>
+        </div>
 
         <!-- Help Modal -->
         <div id="help-modal" class="modal-overlay">
@@ -374,7 +393,7 @@
                     </div>
 
                     <!-- MISPLACED ITEMS IN AGE 5 -->
-                    <div class="hotspot clickable draggable" style="left: 15%; top: 68%; width: 7%; height: 6%;" data-item="misplaced-visa-form" data-origin="15" title="Official Form">
+                    <div class="hotspot clickable draggable" style="left: 15%; top: 68%; width: 7%; height: 6%;" data-item="misplaced-visa-form" title="Official Form">
                         <svg viewBox="0 0 80 60">
                             <polygon points="10,10 50,5 60,40 15,45" fill="#fcfcfc" stroke="#888" stroke-width="1"/>
                             <line x1="20" y1="15" x2="45" y2="12" stroke="#118ab2" stroke-width="1.5"/>
@@ -385,7 +404,7 @@
                         <span class="hotspot-label">Paper Form</span>
                     </div>
 
-                    <div class="hotspot clickable draggable" style="left: 65%; top: 74%; width: 7%; height: 6%;" data-item="misplaced-trip-form" data-origin="10" title="Trip Form">
+                    <div class="hotspot clickable draggable" style="left: 65%; top: 74%; width: 7%; height: 6%;" data-item="misplaced-trip-form" title="Trip Form">
                         <svg viewBox="0 0 80 60">
                             <polygon points="15,5 55,10 50,50 10,45" fill="#fff9c4" stroke="#e6c229" stroke-width="1"/>
                             <line x1="25" y1="15" x2="45" y2="18" stroke="#d90429" stroke-width="2"/>
@@ -639,7 +658,7 @@
                     </div>
 
                     <!-- MISPLACED ITEM IN AGE 10 -->
-                    <div class="hotspot clickable draggable" style="left: 70%; top: 64%; width: 8%; height: 7%;" data-item="misplaced-graduation-album" data-origin="15" title="Graduation Album">
+                    <div class="hotspot clickable draggable" style="left: 70%; top: 64%; width: 8%; height: 7%;" data-item="misplaced-graduation-album" title="Graduation Album">
                         <svg viewBox="0 0 70 90">
                             <rect x="5" y="5" width="60" height="80" rx="3" fill="#1f3c2b" stroke="#0f2619" stroke-width="2"/>
                             <rect x="15" y="5" width="4" height="80" fill="#ffd166"/>
@@ -818,7 +837,7 @@
                         <span class="hotspot-label">Faded Frame</span>
                     </div>
                     <!-- MISPLACED ITEMS IN AGE 15 -->
-                    <div class="hotspot clickable draggable" style="left: 70%; top: 58%; width: 6%; height: 6%;" data-item="misplaced-drawing" data-origin="5" title="Crayon Drawing: Family">
+                    <div class="hotspot clickable draggable" style="left: 70%; top: 58%; width: 6%; height: 6%;" data-item="misplaced-drawing" title="Crayon Drawing: Family">
                         <svg viewBox="0 0 100 100" style="background:#ffffff; border:1px solid #ddd; box-shadow: 1px 2px 4px rgba(0,0,0,0.15);">
                             <rect width="100" height="100" fill="#ffffff"/>
                             <circle cx="50" cy="45" r="12" fill="none" stroke="#e63946" stroke-width="3"/>
@@ -830,7 +849,7 @@
                         <span class="hotspot-label">Crayon Family</span>
                     </div>
 
-                    <div class="hotspot clickable draggable" style="left: 12%; top: 38%; width: 7%; height: 6%;" data-item="misplaced-texts" data-origin="10" title="Text messages from bullies">
+                    <div class="hotspot clickable draggable" style="left: 12%; top: 38%; width: 7%; height: 6%;" data-item="misplaced-texts" title="Text messages from bullies">
                         <svg viewBox="0 0 60 100">
                             <rect x="5" y="5" width="50" height="90" rx="8" fill="#2b2b2b" stroke="#1c1c1c" stroke-width="2"/>
                             <rect x="8" y="12" width="44" height="76" rx="2" fill="#0d0d0f"/>
@@ -843,7 +862,7 @@
                         <span class="hotspot-label">Bully Texts</span>
                     </div>
 
-                    <div class="hotspot clickable draggable" style="left: 55%; top: 66%; width: 8%; height: 7%;" data-item="misplaced-chemistry-kit" data-origin="15" title="Chemistry Kit">
+                    <div class="hotspot clickable draggable" style="left: 55%; top: 66%; width: 8%; height: 7%;" data-item="misplaced-chemistry-kit" title="Chemistry Kit">
                         <svg viewBox="0 0 80 80">
                             <polygon points="40,20 20,70 60,70" fill="rgba(173, 216, 230, 0.4)" stroke="#eef1f6" stroke-width="2"/>
                             <polygon points="35,45 22,68 58,68 45,45" fill="#48cae4"/>
@@ -853,7 +872,7 @@
                         <span class="hotspot-label">Chemistry Kit</span>
                     </div>
 
-                    <div class="hotspot clickable draggable" style="left: 30%; top: 68%; width: 6%; height: 6%;" data-item="misplaced-gift" data-origin="5" title="Unopened 5th Birthday Gift">
+                    <div class="hotspot clickable draggable" style="left: 30%; top: 68%; width: 6%; height: 6%;" data-item="misplaced-gift" title="Unopened 5th Birthday Gift">
                         <svg viewBox="0 0 80 80">
                             <rect x="15" y="25" width="50" height="50" rx="3" fill="#f4a261" stroke="#e76f51" stroke-width="2"/>
                             <rect x="36" y="25" width="8" height="50" fill="#e63946"/>
@@ -864,7 +883,7 @@
                         <span class="hotspot-label">Birthday Gift</span>
                     </div>
 
-                    <div class="hotspot clickable draggable" style="left: 42%; top: 68%; width: 6%; height: 6%;" data-item="misplaced-block" data-origin="5" title="Oversized Alphabet Block">
+                    <div class="hotspot clickable draggable" style="left: 42%; top: 68%; width: 6%; height: 6%;" data-item="misplaced-block" title="Oversized Alphabet Block">
                         <svg viewBox="0 0 80 80">
                             <rect x="5" y="5" width="70" height="70" rx="8" fill="#e76f51" stroke="#b32a2a" stroke-width="3"/>
                             <rect x="15" y="15" width="50" height="50" rx="4" fill="#ffffff"/>
@@ -874,7 +893,7 @@
                         <span class="hotspot-label">Alphabet Block</span>
                     </div>
 
-                    <div class="hotspot clickable draggable" style="left: 50%; top: 58%; width: 6%; height: 6%;" data-item="misplaced-apology" data-origin="10" title="Apology Letter Birthday">
+                    <div class="hotspot clickable draggable" style="left: 50%; top: 58%; width: 6%; height: 6%;" data-item="misplaced-apology" title="Apology Letter Birthday">
                         <svg viewBox="0 0 80 60">
                             <polygon points="10,15 40,30 70,15 70,55 10,55" fill="#fffef0" stroke="#cbab85" stroke-width="2"/>
                             <polygon points="15,5 65,5 65,30 15,30" fill="#ffffff" stroke="#ccc" stroke-width="1"/>
@@ -985,6 +1004,173 @@
                 </div>
 
             </div>
+
+            <!-- ==================== DETECTIVE CROSSWORD CONTAINER ==================== -->
+            <div id="crossword-container" style="display: none;">
+                <!-- Floating Controls Panel (Nav back to rooms, sound, live timer) -->
+                <div id="crossword-floating-controls" class="floating-controls-panel">
+                    <div class="floating-timer-wrapper">
+                        <span class="timer-label">ELAPSED TIME</span>
+                        <div id="crossword-timer" class="floating-timer">00:00</div>
+                    </div>
+                    <div class="floating-action-buttons">
+                        <button id="btn-crossword-back" class="floating-btn" title="Explore Bedroom">
+                            <span class="btn-icon">🛏️</span> <span class="btn-text">Explore Bedroom</span>
+                        </button>
+                        <button id="btn-crossword-audio" class="floating-btn" title="Toggle Sound">
+                            <span class="btn-icon">🔊</span> <span class="btn-text">Sound: On</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Main Detective Desk Workspace -->
+                <div class="crossword-desk-container">
+                    
+                    <!-- Scattered Desk Clutter (Background/Decorative) -->
+                    <div class="clutter-photo photo-1" aria-hidden="true">
+                        <img src="assets/vintage_photo.svg" alt="Vintage photo evidence">
+                    </div>
+                    
+                    <div class="clutter-photo photo-2" aria-hidden="true">
+                        <div class="pinned-note">
+                            <div class="tape"></div>
+                            <p class="handwritten">NODE 01: HEROBRINE<br>NODE 02: VETTEL<br>FIND THE INTERSECTIONS</p>
+                        </div>
+                    </div>
+                    
+                    <div class="clutter-folder" aria-hidden="true">
+                        <div class="folder-tab">CASE_FILE_S_992</div>
+                        <div class="folder-content">
+                            <p class="folder-text">CLASSIFIED - DO NOT DISTRIBUTE</p>
+                        </div>
+                    </div>
+                    
+                    <div class="clutter-pen" aria-hidden="true">
+                        <div class="pen-body"></div>
+                        <div class="pen-cap"></div>
+                    </div>
+
+                    <!-- Realistic CSS-drawn Coffee Mug -->
+                    <div class="clutter-coffee-mug" aria-hidden="true">
+                        <div class="mug-handle"></div>
+                        <div class="mug-body">
+                            <div class="coffee-liquid">
+                                <div class="coffee-shine"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Scattered Underneath Newspaper Sheets -->
+                    <div class="background-paper paper-left" aria-hidden="true">
+                        <div class="bg-paper-content">
+                            <div class="bg-paper-col"></div>
+                            <div class="bg-paper-col"></div>
+                        </div>
+                    </div>
+                    <div class="background-paper paper-right" aria-hidden="true">
+                        <div class="bg-paper-content">
+                            <div class="bg-paper-col"></div>
+                            <div class="bg-paper-col"></div>
+                        </div>
+                    </div>
+
+                    <!-- The Old Newspaper Sheet -->
+                    <article id="newspaper" class="newspaper-sheet">
+                        <!-- Coffee Stain Overlay -->
+                        <div class="coffee-stain-overlay" aria-hidden="true"></div>
+                        
+                        <!-- Paper Clip Clamping the Newspaper -->
+                        <div class="paper-clip" aria-hidden="true"></div>
+                        
+                        <!-- Fold creases (shadows and highlights overlay) -->
+                        <div class="paper-crease-h" aria-hidden="true"></div>
+                        <div class="paper-crease-v" aria-hidden="true"></div>
+
+                        <!-- Newspaper Header -->
+                        <header class="newspaper-header">
+                            <div class="header-system-labels">
+                                <span class="label-flicker">SYSTEM_INTEGRITY_SECURED</span>
+                                <span>NODE_01 OK</span>
+                                <span>NODE_02 OK</span>
+                            </div>
+                            
+                            <h1 class="newspaper-title">PROJECT REWIND</h1>
+                            
+                            <div class="newspaper-subtitle-container">
+                                <div class="newspaper-edition">NIGHT EDITION &bull; CLASSIFIED</div>
+                                <div class="system-version">MEMORY_RECONSTRUCTION_OS_V2.0.1</div>
+                                <div class="newspaper-date">JUNE 6, 2026</div>
+                            </div>
+                            
+                            <div class="double-border"></div>
+                        </header>
+
+                        <!-- Main Newspaper Body (Grid + Clues) -->
+                        <div class="newspaper-body">
+                            
+                            <!-- Left Section: Crossword Puzzle Grid -->
+                            <section class="grid-section">
+                                <div class="grid-instructions">
+                                    <span>INSTRUCTIONS: RECONSTRUCT THE CELLS BY ENTERING CORRESPONDING LETTERS.</span>
+                                </div>
+                                <!-- Crossword Grid -->
+                                <div id="crossword-grid" class="crossword-grid" role="grid" aria-label="Memory Reconstruction Crossword Grid">
+                                    <!-- Grid will be generated dynamically by JavaScript -->
+                                </div>
+                            </section>
+
+                            <!-- Right Section: Clues Panel -->
+                            <section class="clues-section">
+                                <h2 class="clues-title">CLUE DECRYPTION QUEUE</h2>
+                                <div class="clues-divider"></div>
+                                
+                                <div class="clues-container">
+                                    <!-- Across Clues -->
+                                    <div class="clues-group">
+                                        <h3>ACROSS</h3>
+                                        <ul id="across-clues-list" class="clues-list">
+                                            <!-- Populated dynamically -->
+                                        </ul>
+                                    </div>
+                                    
+                                    <!-- Down Clues -->
+                                    <div class="clues-group">
+                                        <h3>DOWN</h3>
+                                        <ul id="down-clues-list" class="clues-list">
+                                            <!-- Populated dynamically -->
+                                        </ul>
+                                    </div>
+                                </div>
+                            </section>
+
+                        </div>
+
+                        <!-- Bottom Panel (Progress & Submit) -->
+                        <footer class="newspaper-footer">
+                            <div class="double-border"></div>
+                            <div class="footer-controls">
+                                <!-- Memory Integrity Progress -->
+                                <div class="progress-container">
+                                    <div class="progress-labels">
+                                        <span class="progress-title">MEMORY INTEGRITY</span>
+                                        <span id="progress-percentage" class="progress-percentage">0%</span>
+                                    </div>
+                                    <div class="progress-bar-track">
+                                        <div id="progress-bar-fill" class="progress-bar-fill"></div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Submit Button -->
+                                <button id="submit-reconstruction-btn" class="submit-btn">
+                                    <span class="btn-glitch-text">SUBMIT RECONSTRUCTION</span>
+                                    <span class="btn-glow"></span>
+                                </button>
+                            </div>
+                        </footer>
+                    </article>
+                </div>
+            </div>
+
         </div>
 
         <!-- ==================== DYNAMIC MODAL CLOSE-UP VIEW ==================== -->
@@ -998,7 +1184,51 @@
         </div>
     </main>
 
+    <!-- Success Overlay / Dossier Modal -->
+    <div id="success-overlay" class="modal-overlay" style="display: none;">
+        <!-- Vintage Case File Manila Folder -->
+        <div class="case-file-dossier">
+            <!-- Folder Tab -->
+            <div class="dossier-tab">CASE_FILE_RESTORED</div>
+            
+            <div class="dossier-content">
+                <!-- Confidential/Restored Rubber Stamp -->
+                <div class="confidential-stamp">RESTORED</div>
+                
+                <!-- Document Header -->
+                <header class="dossier-header">
+                    <div class="dossier-meta">
+                        <span>MEM_REC // NO_0992</span>
+                        <span>DECRYPTION: SUCCESS</span>
+                    </div>
+                    <h2 id="modal-title" class="dossier-headline" style="color: #000; font-family: 'Playfair Display', serif; font-size: 2rem;">MEMORY RESTORED</h2>
+                    <div class="dossier-divider"></div>
+                </header>
+                
+                <!-- Dossier body text -->
+                <p class="dossier-status-text" style="color: #2b2b2b;">The fragmented memory nodes have been successfully aligned and verified.</p>
+                
+                <!-- Typed Dossier Records -->
+                <div class="dossier-records" style="color: #2b2b2b; text-align: left; margin: 15px 0;">
+                    <div class="record-line"><span class="check">[✓]</span> TARGET CONNECTION: STABLE</div>
+                    <div class="record-line"><span class="check">[✓]</span> RECONSTRUCTED MEMORY SEGMENTS: SECURE</div>
+                    <div class="record-line"><span class="check">[✓]</span> INTEGRITY LEVEL: 100%</div>
+                    <div class="record-line" id="crossword-final-time"><span class="check">[✓]</span> TOTAL TIME ELAPSED: --:--</div>
+                </div>
+
+                <button id="close-dossier-btn" class="dossier-close-btn">DISMISS FILE</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Analog Film Grain / Noise Overlay -->
+    <div class="film-grain"></div>
+
+    <!-- Warm Flickering Spotlight Layer -->
+    <div class="desk-light"></div>
+
     <!-- App Logic -->
     <script src="app.js"></script>
+    <script src="crossword.js"></script>
 </body>
 </html>
