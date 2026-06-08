@@ -14,9 +14,26 @@ if (!process.env.ADMIN_PASSWORD) {
     console.warn(`A temporary admin password has been generated for this session: ${ADMIN_PASSWORD}`);
 }
 
-// Sessions & Tokens in-memory store
+// Sessions & Tokens store
 const activeAdminSessions = new Set();
-const activeGameSessions = new Map(); // token -> timestamp
+const SECRET_KEY = process.env.SECRET_KEY || 'rpg-event-samrudh-sharma-2026-secret';
+
+function generateSessionToken() {
+    const startTime = Date.now();
+    const payload = startTime.toString();
+    const signature = crypto.createHmac('sha256', SECRET_KEY).update(payload).digest('hex');
+    return `${payload}.${signature}`;
+}
+
+function verifySessionToken(token) {
+    if (!token) return null;
+    const parts = token.split('.');
+    if (parts.length !== 2) return null;
+    const [payload, signature] = parts;
+    const expectedSignature = crypto.createHmac('sha256', SECRET_KEY).update(payload).digest('hex');
+    if (signature !== expectedSignature) return null;
+    return parseInt(payload, 10);
+}
 
 // Middleware
 app.use(cors());
@@ -104,18 +121,18 @@ function authenticateAdmin(req, res, next) {
     next();
 }
 
-// API: Get Scores
+// API: Get Scores (Excludes tokens in public output)
 app.get('/api/scores', (req, res) => {
     const scores = readScores();
     // Sort scores: highest score first, then lowest time
     scores.sort((a, b) => b.score - a.score || a.time - b.time);
-    res.json(scores);
+    const publicScores = scores.map(({ token, ...rest }) => rest);
+    res.json(publicScores);
 });
 
 // API: Start Game Session (Generate game token for score submission anti-cheat)
 app.post('/api/start-session', (req, res) => {
-    const token = crypto.randomBytes(16).toString('hex');
-    activeGameSessions.set(token, Date.now());
+    const token = generateSessionToken();
     res.json({ token });
 });
 
@@ -128,14 +145,13 @@ app.post('/api/submit-score', (req, res) => {
     }
 
     // 1. Session Token Validation (Anti-Cheat)
-    if (!token || !activeGameSessions.has(token)) {
+    const startTime = verifySessionToken(token);
+    if (!startTime) {
         return res.status(403).json({ error: 'Cheat protection active: Invalid or missing game session token.' });
     }
 
-    const startTime = activeGameSessions.get(token);
     // Invalidate if token is older than 2 hours
     if (Date.now() - startTime > 2 * 60 * 60 * 1000) {
-        activeGameSessions.delete(token);
         return res.status(403).json({ error: 'Game session has expired.' });
     }
 
@@ -155,15 +171,18 @@ app.post('/api/submit-score', (req, res) => {
         return res.status(400).json({ error: 'Team name already exists! Please choose a different name.' });
     }
 
-    // Single-use token invalidation (only delete after all validations succeed)
-    activeGameSessions.delete(token);
+    // Check if token has already been used (single-use validation)
+    if (scores.some(s => s.token === token)) {
+        return res.status(403).json({ error: 'Cheat protection active: Game session token already used.' });
+    }
 
-    scores.push({ team, score, time, formatted, items: items || [], date: new Date().toISOString() });
+    scores.push({ team, score, time, formatted, items: items || [], token, date: new Date().toISOString() });
     writeScores(scores);
     
-    // Return the updated sorted leaderboard
+    // Return the updated sorted leaderboard (excluding tokens)
     scores.sort((a, b) => b.score - a.score || a.time - b.time);
-    res.json(scores);
+    const publicScores = scores.map(({ token, ...rest }) => rest);
+    res.json(publicScores);
 });
 
 // API: Verify Admin Password (Returns Admin Session Bearer Token)
