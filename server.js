@@ -139,9 +139,6 @@ app.post('/api/submit-score', (req, res) => {
         return res.status(403).json({ error: 'Game session has expired.' });
     }
 
-    // Single-use token invalidation
-    activeGameSessions.delete(token);
-
     // 2. Server-side Score Integrity Check
     if (items && Array.isArray(items)) {
         const correctCount = items.filter(item => item.status === 'correct').length;
@@ -157,6 +154,9 @@ app.post('/api/submit-score', (req, res) => {
     if (scores.find(s => s.team.trim().toLowerCase() === team.trim().toLowerCase())) {
         return res.status(400).json({ error: 'Team name already exists! Please choose a different name.' });
     }
+
+    // Single-use token invalidation (only delete after all validations succeed)
+    activeGameSessions.delete(token);
 
     scores.push({ team, score, time, formatted, items: items || [], date: new Date().toISOString() });
     writeScores(scores);

@@ -91,6 +91,7 @@ document.addEventListener('DOMContentLoaded', () => {
     applyScenario();
 
     async function startSession() {
+        if (sessionToken) return;
         try {
             const res = await fetch('/api/start-session', { method: 'POST' });
             if (res.ok) {
@@ -637,12 +638,14 @@ document.addEventListener('DOMContentLoaded', () => {
         
         document.querySelectorAll('.draggable').forEach(item => {
             const isCore = coreItems.includes(item.dataset.item);
+            if (!isCore) return; // Skip non-core items for scoring and results
+            
             const correctRoom = item.dataset.origin;
             const currentParentId = item.parentNode.id;
             const itemName = item.querySelector('.hotspot-label').textContent;
             
             if (currentParentId === `canvas-age-${correctRoom}`) {
-                if (isCore) correctCount++;
+                correctCount++;
                 itemResults.push({ name: itemName, status: 'correct', room: correctRoom });
             } else {
                 let currentRoom = currentParentId.replace('canvas-age-', '');
@@ -667,6 +670,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (!response.ok) {
                 alert(data.error || 'Failed to submit score.');
+                if (response.status === 400 && data.error && data.error.toLowerCase().includes('team name already exists')) {
+                    const newName = prompt("Enter a different Team Name:");
+                    if (newName) {
+                        document.getElementById('team-name-input').value = newName.trim();
+                    }
+                }
                 return;
             }
 
@@ -774,6 +783,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             const selectedAge = parseInt(door.dataset.doorAge);
+            
+            // Ensure we have a session token
+            await startSession();
             
             // Hide landing screen and start the sequence
             if(landingScreen) landingScreen.classList.remove('active');
