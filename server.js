@@ -7,11 +7,10 @@ const crypto = require('crypto');
 const app = express();
 const PORT = process.env.PORT || 3000;
 const SCORES_FILE = path.join(__dirname, 'scores.json');
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || crypto.randomBytes(16).toString('hex');
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin';
 
 if (!process.env.ADMIN_PASSWORD) {
-    console.warn("WARNING: ADMIN_PASSWORD environment variable is not set.");
-    console.warn(`A temporary admin password has been generated for this session: ${ADMIN_PASSWORD}`);
+    console.warn("WARNING: ADMIN_PASSWORD environment variable is not set. Defaulting to 'admin'.");
 }
 
 // Sessions & Tokens store
