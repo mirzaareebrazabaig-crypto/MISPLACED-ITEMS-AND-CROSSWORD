@@ -436,14 +436,15 @@ const LORE_DATA = {
   'misplaced-visa-form': `
                     <div class="document-view-container">
                         <div class="report-card-sheet" style="font-family:'Outfit'; max-width:500px;">
-                            <h3 style="color:#118ab2; border-bottom-color:#118ab2;">Student Visa Renewal Form (UK)</h3>
+                            <h3 style="color:#118ab2; border-bottom-color:#118ab2;">Student Visa Renewal Form (USA - Stanford University)</h3>
                             <p style="font-size:0.95rem; line-height:1.6; margin-bottom:15px;">
                                 <strong>Applicant Name:</strong> Samrudh Sharma<br>
+                                <strong>Target Institution:</strong> Stanford University<br>
                                 <strong>Date of Birth:</strong> 12 Oct 2005<br>
                                 <strong>Date of Signing:</strong> <span style="color:#d90429; font-weight:bold;">15 May 2020</span>
                             </p>
                             <p style="font-size:0.9rem; line-height:1.5; color:#444;">
-                                A highly detailed official legal document filled out in neat cursive. It also includes an IELTS preparation slip. 
+                                A highly detailed official legal document filled out in neat cursive for university admission. It also includes an IELTS preparation slip. 
                             </p>
                             <div style="border:2px solid #ccc; padding:10px; margin-top:20px; border-radius:4px; position:relative;">
                                 <span style="font-family:'Caveat'; color:#444; font-size:1.4rem;">
