@@ -45,7 +45,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let gameStarted = false;
     let timerInterval = null;
     let gameStartTime = 0;
-    let isComputerUnlocked = false;
+    let isComputerUnlocked = true;
 
     function applyScenario(startingPlacements) {
         if (!startingPlacements) return;
@@ -979,7 +979,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 playBtn.addEventListener('click', toggleCassettePlay);
             }
 
-            if (itemId === 'computer-15') {
+            if (itemId === 'computer-15' || itemId === 'computer-15-unlocked') {
                 bindComputerInterface();
             }
         } catch (err) {

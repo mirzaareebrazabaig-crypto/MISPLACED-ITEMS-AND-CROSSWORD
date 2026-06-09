@@ -652,7 +652,7 @@ const LORE_DATA = {
                             </div>
                         </div>
                         <p style="text-align:center; color:var(--text-muted); max-width:500px; font-size:0.9rem; line-height:1.6; margin:15px auto 0 auto;">
-                            A high school graduation yearbook from the year 2020. The layout displays Samrudh's profile side-by-side with William K. While Sam has angrily crossed out William's profile with 'LOSER', Sam's profile is defaced with a cruel vote calling him 'Most likely to disappear'.
+                            An Amarillo High School graduation yearbook from the year 2020. The layout displays Samrudh's profile side-by-side with William K. While Sam has angrily crossed out William's profile with 'LOSER', Sam's profile is defaced with a cruel vote calling him 'Most likely to disappear'.
                         </p>
                     </div>`,
   'bookshelf-cupboard': `
@@ -739,20 +739,15 @@ const LORE_DATA = {
                         </div>
                     </div>`,
   'photo-friends-15': `
-                    <div class="photo-closeup-container">
-                        <div class="photo-matting">
-                            <svg viewBox="0 0 160 120" xmlns="http://www.w3.org/2000/svg">
-                                <rect width="160" height="120" fill="#ffd166" opacity="0.2"/>
-                                <image href="sam.png" x="65" y="25" width="30" height="36" />
-                                <circle cx="35" cy="50" r="12" fill="#ef476f" opacity="0.8"/>
-                                <circle cx="125" cy="50" r="12" fill="#118ab2" opacity="0.8"/>
-                            </svg>
-                            <div class="photo-caption" style="font-family:'Caveat';">First Real Friends — 2020</div>
-                        </div>
-                        <p style="text-align:center; color:var(--text-muted); max-width:460px; font-size:0.9rem; line-height:1.6; margin-top:15px;">
-                            A photo of Sam smiling widely with a small group of friends. This is the first photo across any room where Sam looks genuinely, unguardedly happy in the presence of other people.
-                        </p>
-                    </div>`,
+                     <div class="photo-closeup-container">
+                         <div class="photo-matting" style="max-width:320px; background:#fff; padding:10px; border: 2px solid #ccc; text-align: center; margin: auto;">
+                             <img src="first_friends.png" alt="First Real Friends — 2020" style="width: 100%; height: auto; border-radius: 4px;">
+                             <div class="photo-caption" style="font-family:'Caveat'; font-size:1.6rem; margin-top:10px;">First Real Friends — 2020</div>
+                         </div>
+                         <p style="text-align:center; color:var(--text-muted); max-width:460px; font-size:0.9rem; line-height:1.6; margin-top:15px;">
+                             A photo of Sam smiling widely with a small group of friends. This is the first photo across any room where Sam looks genuinely, unguardedly happy in the presence of other people.
+                         </p>
+                     </div>`,
   'photo-corgi-wall-15': `
                     <div class="photo-closeup-container">
                         <div class="photo-matting" style="filter: sepia(0.6) saturate(0.2); max-width:320px;">
