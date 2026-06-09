@@ -1340,6 +1340,27 @@ document.addEventListener('DOMContentLoaded', () => {
                             This score fulfills the English proficiency requirements for all top-tier international institutions, including Stanford University.
                         </p>
                     </div>`,
+                prom: `
+                    <div style="width:100%; text-align:left; box-sizing:border-box;">
+                        <strong style="color:#e63946; border-bottom:1px solid rgba(230,57,70,0.3); display:block; padding-bottom:5px; margin-bottom:10px;">EMAIL DRAFT: draft_prom_night.eml</strong>
+                        <p style="color:#8ea2c0; font-size:0.75rem; margin:0 0 10px 0;">To: emma.j@amarillohigh.edu<br>Date: June 9, 2020<br>Status: UNSENT DRAFT</p>
+                        <div style="line-height:1.5; color:#eef1f6; font-size:0.8rem;">
+                            <p style="margin: 0 0 10px 0;">I am writing this from my bedroom floor. My hands are still shaking. Tonight was supposed to be the best night. I spent weeks preparing everything perfectly. I convinced my parents about my outfit. I wore a modern suit to fit in. I thought Emma wanted to go with me. I was so completely wrong.</p>
+                            <p style="margin: 0 0 10px 0;">We stood near the dance floor. Her friends walked over. I tried to make a joke. Emma looked at them and sneered. She mocked my dancing and my voice. She said I looked desperate asking her.</p>
+                            <p style="margin: 0 0 10px 0;">The guys walked up. They saw Emma leading the mockery. They joined in instantly. They tossed around old insults. They called me "Stinky Sam."</p>
+                            <p style="margin: 0 0 10px 0;">The worst part was Emma. She laughed right along with them.</p>
+                            <p style="margin: 0 0 10px 0;">Everyone around us was watching. People recorded it on their phones.</p>
+                            <p style="margin: 0 0 10px 0;">A massive lump formed in my throat.</p>
+                            <p style="margin: 0 0 10px 0;">The first tear slipped out.</p>
+                            <p style="margin: 0 0 10px 0;">One of the guys pointed it out to everyone.</p>
+                            <p style="margin: 0 0 10px 0;">I could not take it anymore.</p>
+                            <p style="margin: 0 0 10px 0;">I turned around and walked out.</p>
+                            <p style="margin: 0 0 10px 0;">I was crying openly.</p>
+                            <p style="margin: 0 0 10px 0;">I felt completely humiliated.</p>
+                            <p style="margin: 0 0 10px 0;">I walked home in the dark.</p>
+                            <p style="margin: 0;">I have never felt so alone.</p>
+                        </div>
+                    </div>`,
                 therapy: `
                     <div style="width:100%; text-align:left; box-sizing:border-box;">
                         <strong style="color:#2a9d8f; border-bottom:1px solid rgba(42,157,143,0.3); display:block; padding-bottom:5px; margin-bottom:10px;">LOG: therapy_session.log</strong>

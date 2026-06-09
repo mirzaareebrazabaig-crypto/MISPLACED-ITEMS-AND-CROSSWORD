@@ -174,7 +174,7 @@ function renderClues() {
   acrossList.innerHTML = "";
   downList.innerHTML = "";
 
-  WORDS_METADATA.sort((a, b) => a.number - b.number).forEach((w) => {
+  [...WORDS_METADATA].sort((a, b) => a.number - b.number).forEach((w) => {
     const li = document.createElement("li");
     li.classList.add("clue-item");
     li.setAttribute("id", `clue-${w.number}`);

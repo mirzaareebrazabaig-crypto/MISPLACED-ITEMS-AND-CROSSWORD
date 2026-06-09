@@ -938,10 +938,33 @@
                     <!-- Static: Broken Skateboard -->
                     <div class="hotspot clickable" style="left: 3%; top: 60%; width: 8%; height: 18%;" data-item="broken-skateboard-15" title="Broken Skateboard">
                         <svg viewBox="0 0 60 120">
-                            <rect x="25" y="10" width="10" height="100" rx="5" fill="#e76f51" transform="rotate(-15 30 60)"/>
-                            <path d="M12,45 L48,55" stroke="#111" stroke-width="3" fill="none"/>
-                            <circle cx="20" cy="22" r="5" fill="#333"/>
-                            <circle cx="35" cy="98" r="5" fill="#333"/>
+                            <!-- Top Piece of Skateboard (Rotated slightly to the left) -->
+                            <g transform="rotate(-12 30 45)">
+                                <!-- Deck Top Half -->
+                                <path d="M 20,48 L 20,20 C 20,10 40,10 40,20 L 40,46 Z" fill="#d87d56" stroke="#aa5533" stroke-width="1.5"/>
+                                <!-- Grip Tape top -->
+                                <path d="M 22,46 L 22,20 C 22,12 38,12 38,20 L 38,44 Z" fill="#333333"/>
+                                <!-- Top Wheels & Truck -->
+                                <rect x="15" y="24" width="30" height="3" fill="#888888"/>
+                                <circle cx="15" cy="25" r="4.5" fill="#111111"/>
+                                <circle cx="45" cy="25" r="4.5" fill="#111111"/>
+                                <!-- Jagged break edge -->
+                                <path d="M 20,48 L 25,44 L 30,47 L 35,43 L 40,46" fill="none" stroke="#aa5533" stroke-width="1.5"/>
+                            </g>
+                            
+                            <!-- Bottom Piece of Skateboard (Rotated slightly to the right, shifted down) -->
+                            <g transform="translate(4, 8) rotate(15 30 75)">
+                                <!-- Deck Bottom Half -->
+                                <path d="M 20,54 L 40,56 L 40,90 C 40,100 20,100 20,90 Z" fill="#d87d56" stroke="#aa5533" stroke-width="1.5"/>
+                                <!-- Grip Tape bottom -->
+                                <path d="M 22,56 L 38,58 L 38,90 C 38,98 22,98 22,90 Z" fill="#333333"/>
+                                <!-- Bottom Wheels & Truck -->
+                                <rect x="15" y="80" width="30" height="3" fill="#888888"/>
+                                <circle cx="15" cy="81" r="4.5" fill="#111111"/>
+                                <circle cx="45" cy="81" r="4.5" fill="#111111"/>
+                                <!-- Jagged break edge -->
+                                <path d="M 20,54 L 25,58 L 30,55 L 35,59 L 40,56" fill="none" stroke="#aa5533" stroke-width="1.5"/>
+                            </g>
                         </svg>
                         <div class="hotspot-glow"></div>
                         <span class="hotspot-label">Broken Board</span>

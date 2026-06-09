@@ -715,11 +715,9 @@ body.crossword-mode-active .desk-light {
 }
 
 .clues-container {
-  overflow-y: auto;
-  max-height: 450px;
+  overflow-y: visible;
+  max-height: none;
   padding-right: 8px;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(0, 0, 0, 0.25) rgba(0, 0, 0, 0.05);
 }
 
 .clues-container::-webkit-scrollbar {
