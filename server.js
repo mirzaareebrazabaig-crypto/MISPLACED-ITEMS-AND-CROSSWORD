@@ -51,6 +51,8 @@ const ALLOWED_STATIC_FILES = [
     'favicon.png',
     'background.png',
     'buddy.png',
+    'buddy_puppy.png',
+    'football_poster.jpg',
     'collar_lore.png',
     'dvd_lore.png',
     'family_drawing.png',

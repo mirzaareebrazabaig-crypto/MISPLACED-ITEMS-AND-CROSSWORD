@@ -346,8 +346,8 @@ const LORE_DATA = {
   'photo-buddy-5': `
                     <div class="photo-closeup-container">
                         <div class="photo-matting" style="max-width:320px;">
-                            <img src="buddy.png" alt="Buddy puppy photo">
-                            <div class="photo-caption">Buddy — 2010</div>
+                            <img src="buddy_puppy.png" alt="Buddy puppy photo">
+                            <div class="photo-caption">Buddy - 2010</div>
                         </div>
                         <p style="text-align:center; color:var(--text-muted); max-width:460px; font-size:0.9rem; line-height:1.6;">
                             A shiny, prominently placed frame on the bedside table. Buddy the puppy is sitting proudly, looking directly at the camera with his tongue sticking out.
@@ -1145,6 +1145,42 @@ const LORE_DATA = {
                             SYSTEM READY. ENTER PASSWORD TO RECOVER SAM.
                         </div>
                     </div>`,
+  'computer-15-unlocked': `
+                    <div class="computer-screen-experience" style="display:flex; flex-direction:column; align-items:stretch; font-family:monospace; background:#0a0a0f; border: 2px solid #5e6b7d; padding:20px; border-radius:8px; box-shadow: inset 0 0 20px rgba(94,107,125,0.3); color:#8ea2c0; width:100%; max-width:640px; margin:auto;">
+                        <div style="display:flex; width:100%; justify-content:space-between; border-bottom:1px solid rgba(94,107,125,0.4); padding-bottom:8px; font-size:0.85rem; margin-bottom:15px;">
+                            <span>SYSTEM TERMINAL [AGE 15] - UNLOCKED</span>
+                            <span style="color:#2ecc71;">● ONLINE</span>
+                        </div>
+                        <div style="display:flex; gap:15px; min-height:280px;">
+                            <!-- File Navigation Sidebar -->
+                            <div style="width:35%; border-right:1px solid rgba(94,107,125,0.3); padding-right:10px; display:flex; flex-direction:column; gap:8px;">
+                                <div style="font-size:0.75rem; color:#5e6b7d; font-weight:bold; margin-bottom:5px;">USER_FILES:</div>
+                                <button class="comp-file-item" data-file="acceptance" style="text-align:left; background:rgba(42, 157, 143, 0.2); border:1px solid rgba(94,107,125,0.3); color:#fff; padding:6px 10px; font-family:monospace; font-size:0.75rem; cursor:pointer; border-radius:3px; width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">✉ stanford_admit.eml</button>
+                                <button class="comp-file-item" data-file="ielts" style="text-align:left; background:rgba(255,255,255,0.05); border:1px solid rgba(94,107,125,0.3); color:#fff; padding:6px 10px; font-family:monospace; font-size:0.75rem; cursor:pointer; border-radius:3px; width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">✉ ielts_report.eml</button>
+                                <button class="comp-file-item" data-file="therapy" style="text-align:left; background:rgba(255,255,255,0.05); border:1px solid rgba(94,107,125,0.3); color:#fff; padding:6px 10px; font-family:monospace; font-size:0.75rem; cursor:pointer; border-radius:3px; width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">📄 therapy_session.log</button>
+                                <button class="comp-file-item" data-file="timeline" style="text-align:left; background:rgba(255,255,255,0.05); border:1px solid rgba(94,107,125,0.3); color:#fff; padding:6px 10px; font-family:monospace; font-size:0.75rem; cursor:pointer; border-radius:3px; width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">📄 timeline_data.dat</button>
+                                <button class="comp-file-item" data-file="medical" style="text-align:left; background:rgba(255,255,255,0.05); border:1px solid rgba(94,107,125,0.3); color:#fff; padding:6px 10px; font-family:monospace; font-size:0.75rem; cursor:pointer; border-radius:3px; width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">📄 diagnosis_rpt.pdf</button>
+                            </div>
+                            <!-- File Viewer Main Panel -->
+                            <div id="comp-file-viewer" style="width:65%; padding-left:5px; font-size:0.8rem; overflow-y:auto; max-height:280px; display:flex; flex-direction:column; justify-content:flex-start; align-items:flex-start;">
+                                <!-- Default content loaded (Stanford Acceptance) -->
+                                <div style="width:100%; text-align:left; box-sizing:border-box;">
+                                    <strong style="color:#2a9d8f; border-bottom:1px solid rgba(42,157,143,0.3); display:block; padding-bottom:5px; margin-bottom:10px;">EMAIL: stanford_admit.eml</strong>
+                                    <p style="color:#8ea2c0; font-size:0.75rem; margin:0 0 10px 0;">From: admissions@stanford.edu<br>Date: May 12, 2020<br>To: samrudh.sharma@stchristophers.edu</p>
+                                    <p style="margin:5px 0; line-height:1.5; color:#eef1f6; font-size:0.8rem;">
+                                        Dear Samrudh,<br><br>
+                                        Congratulations! I am thrilled to inform you that you have been admitted to the <strong>Stanford University Class of 2024</strong>. 
+                                    </p>
+                                    <p style="margin:10px 0; line-height:1.5; color:#eef1f6; font-size:0.8rem;">
+                                        Your outstanding academic record, combined with your pioneering research proposal in Neural Engineering, made you a standout candidate. We are proud to offer you a spot in our undergraduate program.
+                                    </p>
+                                    <p style="margin:10px 0 0 0; line-height:1.5; color:#ffd166; font-size:0.8rem; font-weight:bold;">
+                                        Welcome to Stanford!
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>`,
 };
 
 
@@ -1206,11 +1242,7 @@ const POSTER_ITEMS = {
                 </div>`,
   'football': `
                 <div class="photo-matting" style="max-width:280px; transform:none; border-width:8px;">
-                    <svg viewBox="0 0 170 230" width="100%">
-                        <rect width="170" height="230" fill="#0077b6"/>
-                        <circle cx="85" cy="115" r="45" fill="white"/>
-                        <circle cx="85" cy="115" r="40" fill="#03045e"/>
-                    </svg>
+                    <img src="football_poster.jpg" alt="Football Poster" style="width: 100%; height: auto; border-radius: 4px;">
                     <div class="photo-caption" style="font-family:'Outfit'; font-size:0.95rem; font-weight:600;">Football Team Poster</div>
                 </div>`,
   'buddy': `

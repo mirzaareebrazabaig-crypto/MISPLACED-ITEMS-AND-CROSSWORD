@@ -1012,7 +1012,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Draggables are handled by pointerup to perfectly distinguish drag vs click
                 return;
             }
-            const item = e.currentTarget.dataset.item;
+            let item = e.currentTarget.dataset.item;
+            if (item === 'computer-15' && isComputerUnlocked) {
+                item = 'computer-15-unlocked';
+            }
             openCloseup(item);
         });
     });
@@ -1310,6 +1313,39 @@ document.addEventListener('DOMContentLoaded', () => {
             const fileItems = document.querySelectorAll('.comp-file-item');
             
             const fileContents = {
+                acceptance: `
+                    <div style="width:100%; text-align:left; box-sizing:border-box;">
+                        <strong style="color:#2a9d8f; border-bottom:1px solid rgba(42,157,143,0.3); display:block; padding-bottom:5px; margin-bottom:10px;">EMAIL: stanford_admit.eml</strong>
+                        <p style="color:#8ea2c0; font-size:0.75rem; margin:0 0 10px 0;">From: admissions@stanford.edu<br>Date: May 12, 2020<br>To: samrudh.sharma@stchristophers.edu</p>
+                        <p style="margin:5px 0; line-height:1.5; color:#eef1f6; font-size:0.8rem;">
+                            Dear Samrudh,<br><br>
+                            Congratulations! I am thrilled to inform you that you have been admitted to the <strong>Stanford University Class of 2024</strong>. 
+                        </p>
+                        <p style="margin:10px 0; line-height:1.5; color:#eef1f6; font-size:0.8rem;">
+                            Your outstanding academic record, combined with your pioneering research proposal in Neural Engineering, made you a standout candidate. We are proud to offer you a spot in our undergraduate program.
+                        </p>
+                        <p style="margin:10px 0 0 0; line-height:1.5; color:#ffd166; font-size:0.8rem; font-weight:bold;">
+                            Welcome to Stanford!
+                        </p>
+                    </div>`,
+                ielts: `
+                    <div style="width:100%; text-align:left; box-sizing:border-box;">
+                        <strong style="color:#2a9d8f; border-bottom:1px solid rgba(42,157,143,0.3); display:block; padding-bottom:5px; margin-bottom:10px;">EMAIL: ielts_report.eml</strong>
+                        <p style="color:#8ea2c0; font-size:0.75rem; margin:0 0 10px 0;">From: results@ieltsessentials.com<br>Date: May 5, 2020<br>To: samrudh.sharma@stchristophers.edu</p>
+                        <p style="margin:5px 0; line-height:1.5; color:#eef1f6; font-size:0.8rem;">
+                            Dear Candidate,<br><br>
+                            Your IELTS Academic test results are now available. You have achieved your <strong>highest target score</strong>:
+                        </p>
+                        <p style="margin:10px 0; line-height:1.4; color:#eef1f6; font-size:0.8rem; background:rgba(255,255,255,0.05); padding:10px; border-radius:4px; font-family:monospace;">
+                            • <strong>Listening:</strong> 9.0 &nbsp;&nbsp;&nbsp;&nbsp; • <strong>Reading:</strong> 9.0<br>
+                            • <strong>Writing:</strong> 8.0 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; • <strong>Speaking:</strong> 8.5<br>
+                            ----------------------------------<br>
+                            • <strong>OVERALL BAND SCORE:</strong> <span style="color:#2a9d8f; font-weight:bold; font-size:0.9rem;">8.5 (Expert User)</span>
+                        </p>
+                        <p style="margin:10px 0 0 0; line-height:1.5; color:#eef1f6; font-size:0.8rem;">
+                            This score fulfills the English proficiency requirements for all top-tier international institutions, including Stanford University.
+                        </p>
+                    </div>`,
                 therapy: `
                     <div style="width:100%; text-align:left; box-sizing:border-box;">
                         <strong style="color:#2a9d8f; border-bottom:1px solid rgba(42,157,143,0.3); display:block; padding-bottom:5px; margin-bottom:10px;">LOG: therapy_session.log</strong>
@@ -1379,7 +1415,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         
                         setTimeout(() => {
                             isComputerUnlocked = true;
-                            openCloseup('computer-15');
+                            openCloseup('computer-15-unlocked');
                         }, 1200);
                     } else {
                         errMsg.style.color = '#e07a5f';
