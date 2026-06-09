@@ -1183,7 +1183,7 @@ const SCHOOLBAG_ITEMS = {
   'note-bullying': `
                 <div class="crumpled-note">
                     <div class="crumpled-shatter"></div>
-                    <p style="margin-bottom:15px; font-weight:bold; font-size:1.15rem;">SHARMA'S SMELLY LUNCHBOX</p>
+                    <p style="margin-bottom:15px; font-weight:bold; font-size:1.15rem;">STINKY SAM'S SMELLY LUNCHBOX</p>
                     <p style="margin-bottom:15px;">
                         Why do you eat that garbage? It smells like rotting compost.<br>
                         Eat real food like everyone else, or eat outside on the grass with the bugs.
