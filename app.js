@@ -778,6 +778,11 @@ document.addEventListener('DOMContentLoaded', () => {
             crosswordLayout.style.display = 'none';
             viewport.classList.remove('crossword-active');
             document.body.classList.remove('crossword-mode-active');
+            
+            // Automatically open help/description modal when returning from crossword
+            if (helpModal) {
+                helpModal.classList.add('active');
+            }
         } else if (mode === 'crossword') {
             // Header title updates - hide age indicator and change title
             if (roomAgeIndicator) roomAgeIndicator.style.display = 'none';
