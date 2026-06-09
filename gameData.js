@@ -176,7 +176,7 @@ const yearbookStudents = {
         'J': { name: "Jack Johnson", quote: "No regrets.", photoColor: "#3f37c9" },
         'K': { 
             name: "Kanye West", 
-            quote: "Football is life. St. Christopher varsity squad, we rule this school.", 
+            quote: "Football is life. Amarillo High School varsity squad, we rule this school.", 
             photoColor: "#4895ef",
             isCrumpled: true,
             photoFile: "kanye.png",
@@ -310,23 +310,19 @@ const LORE_DATA = {
                         </p>
                     </div>`,
   'drawing-house': `
-                    <div class="crayon-drawing-closeup">
-                        <div class="crayon-paper">
-                            ${crayonSVGs['house']}
-                        </div>
-                        <div class="crayon-caption">"Our House" (2010)</div>
-                        <p style="text-align:center; color:var(--text-muted); max-width:460px; font-size:0.9rem;">
-                            A house with perfect square windows, but the front door is shut tight. A single child stands outside all alone, looking inside.
+                     <div class="crayon-drawing-closeup">
+                         <div class="crayon-paper">
+                             <img src="house_crayon.png" alt="Crayon House drawing">
+                         </div>
+                         <div class="crayon-caption">"Our House" (2010)</div>
+                         <p style="text-align:center; color:var(--text-muted); max-width:460px; font-size:0.9rem;">
+                             A simple crayon drawing of a house with a red roof and square windows, drawn with wobbly lines on white paper.
                         </p>
                     </div>`,
   'drawing-dog': `
                     <div class="crayon-drawing-closeup">
                         <div class="crayon-paper">
-                            <svg viewBox="0 0 150 150" xmlns="http://www.w3.org/2000/svg">
-                                <rect width="150" height="150" fill="white"/>
-                                <image href="buddy.png" x="15" y="15" width="120" height="120" />
-                                <text x="45" y="142" font-family="Caveat" font-size="16" fill="#b32a2a" font-weight="bold">BUDDY</text>
-                            </svg>
+                            <img src="buddy_crayon.png" alt="Crayon Buddy portrait">
                         </div>
                         <div class="crayon-caption">"Buddy"</div>
                         <p style="text-align:center; color:var(--text-muted); max-width:460px; font-size:0.9rem;">
@@ -336,11 +332,11 @@ const LORE_DATA = {
   'drawing-sun': `
                     <div class="crayon-drawing-closeup">
                         <div class="crayon-paper">
-                            ${crayonSVGs['sun']}
+                            <img src="sun_moon_crayon.png" alt="Crayon Sun & Moon drawing">
                         </div>
-                        <div class="crayon-caption">"Sun & Tree"</div>
+                        <div class="crayon-caption">"Sun & Moon"</div>
                         <p style="text-align:center; color:var(--text-muted); max-width:460px; font-size:0.9rem;">
-                            A drawing of a sunny day. A massive tree stands on the left, and a tiny child stands under it, looking up at the sky. No other figures are nearby.
+                            A child's crayon drawing of a bright yellow sun on one side and a smiling crescent moon on the other side, both sharing the sky.
                         </p>
                     </div>`,
   'photo-buddy-5': `
@@ -527,7 +523,7 @@ const LORE_DATA = {
                                 <circle cx="105" cy="50" r="10" fill="#444"/>
                                 <image href="sam.png" x="135" y="40" width="30" height="36" />
                             </svg>
-                            <div class="photo-caption">St. Christopher Elementary — Class 5B</div>
+                            <div class="photo-caption">Amarillo Elementary School — Class 5B</div>
                         </div>
                         <p style="text-align:center; color:var(--text-muted); max-width:460px; font-size:0.9rem; line-height:1.6;">
                             A school class group photo from 2015. A dense cluster of kids are laughing and hugging in the center. Samrudh is standing on the far right, slightly apart from the crowd, with a hesitant smile.
@@ -580,6 +576,7 @@ const LORE_DATA = {
                         <div class="report-card-sheet" style="font-family:'Outfit'; max-width:500px; transform:rotate(-1deg); padding: 20px;">
                             <h3 style="color:#d94040; border-bottom-color:#d94040;">Math Homework Sheet</h3>
                             <p style="font-size:0.95rem; line-height:1.6; margin-bottom:15px;">
+                                <strong>School:</strong> Amarillo Elementary School<br>
                                 <strong>Topic:</strong> Algebra & Fractions<br>
                                 <strong>Student:</strong> Samrudh Sharma — Grade 5
                             </p>
@@ -629,7 +626,7 @@ const LORE_DATA = {
                     </div>`,
   'misplaced-graduation-album': `
                     <div class="photo-closeup-container" style="max-width:600px; margin:auto;">
-                        <h3 style="color:#ffd166; margin-bottom:20px; text-align:center; font-family:'Outfit';">Senior Yearbook - Class of 2020</h3>
+                        <h3 style="color:#ffd166; margin-bottom:20px; text-align:center; font-family:'Outfit';">Amarillo High School Senior Yearbook - Class of 2020</h3>
                         <div style="display:flex; gap:20px; justify-content:center; flex-wrap:wrap;">
                             <!-- William K Page -->
                             <div class="photo-matting" style="max-width:240px; border-radius:0; border:2px solid #ccc; background:#fbf9f6; padding:15px; text-align:center; flex:1; min-width:200px;">
@@ -1100,6 +1097,9 @@ const LORE_DATA = {
                             <div style="background:#2b2d42; padding:10px; border-radius:8px; align-self:flex-start; max-width:80%;">
                                 "He didn't even speak once during the group project."
                             </div>
+                            <div style="background:#c1121f; padding:10px; border-radius:8px; align-self:flex-end; max-width:80%; color:#fff;">
+                                "Yeah, and now everyone in the corridors is calling him Stinky Sam after that lunchbox incident. So embarrassing."
+                            </div>
                         </div>
                         <div style="font-size:0.8rem; color:#8d99ae; text-align:center; margin-top:10px;">
                             Received June 2015. Saved in screenshots.
@@ -1166,7 +1166,7 @@ const LORE_DATA = {
                                 <!-- Default content loaded (Stanford Acceptance) -->
                                 <div style="width:100%; text-align:left; box-sizing:border-box;">
                                     <strong style="color:#2a9d8f; border-bottom:1px solid rgba(42,157,143,0.3); display:block; padding-bottom:5px; margin-bottom:10px;">EMAIL: stanford_admit.eml</strong>
-                                    <p style="color:#8ea2c0; font-size:0.75rem; margin:0 0 10px 0;">From: admissions@stanford.edu<br>Date: May 12, 2020<br>To: samrudh.sharma@stchristophers.edu</p>
+                                    <p style="color:#8ea2c0; font-size:0.75rem; margin:0 0 10px 0;">From: admissions@stanford.edu<br>Date: May 12, 2020<br>To: samrudh.sharma@amarillohigh.edu</p>
                                     <p style="margin:5px 0; line-height:1.5; color:#eef1f6; font-size:0.8rem;">
                                         Dear Samrudh,<br><br>
                                         Congratulations! I am thrilled to inform you that you have been admitted to the <strong>Stanford University Class of 2024</strong>. 
@@ -1197,7 +1197,7 @@ const SCHOOLBAG_ITEMS = {
                 </div>`,
   'report-card': `
                 <div class="report-card-sheet">
-                    <h3>Report Card — St. Christopher Elementary</h3>
+                    <h3>Report Card — Amarillo Elementary School</h3>
                     <p style="margin-bottom:15px;"><strong>Student:</strong> Samrudh Sharma &nbsp;&nbsp;&nbsp;&nbsp; <strong>Grade:</strong> 5 (2015)</p>
                     <table class="report-table">
                         <thead>

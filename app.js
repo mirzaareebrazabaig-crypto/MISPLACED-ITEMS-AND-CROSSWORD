@@ -1230,7 +1230,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
             </div>
             <div class="yearbook-footer">
-                St. Christopher's High — Class of 2020
+                AMARILLO HIGH SCHOOL — Class of 2020
             </div>
         `;
     }
@@ -1321,7 +1321,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 acceptance: `
                     <div style="width:100%; text-align:left; box-sizing:border-box;">
                         <strong style="color:#2a9d8f; border-bottom:1px solid rgba(42,157,143,0.3); display:block; padding-bottom:5px; margin-bottom:10px;">EMAIL: stanford_admit.eml</strong>
-                        <p style="color:#8ea2c0; font-size:0.75rem; margin:0 0 10px 0;">From: admissions@stanford.edu<br>Date: May 12, 2020<br>To: samrudh.sharma@stchristophers.edu</p>
+                        <p style="color:#8ea2c0; font-size:0.75rem; margin:0 0 10px 0;">From: admissions@stanford.edu<br>Date: May 12, 2020<br>To: samrudh.sharma@amarillohigh.edu</p>
                         <p style="margin:5px 0; line-height:1.5; color:#eef1f6; font-size:0.8rem;">
                             Dear Samrudh,<br><br>
                             Congratulations! I am thrilled to inform you that you have been admitted to the <strong>Stanford University Class of 2024</strong>. 
@@ -1336,7 +1336,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 ielts: `
                     <div style="width:100%; text-align:left; box-sizing:border-box;">
                         <strong style="color:#2a9d8f; border-bottom:1px solid rgba(42,157,143,0.3); display:block; padding-bottom:5px; margin-bottom:10px;">EMAIL: ielts_report.eml</strong>
-                        <p style="color:#8ea2c0; font-size:0.75rem; margin:0 0 10px 0;">From: results@ieltsessentials.com<br>Date: May 5, 2020<br>To: samrudh.sharma@stchristophers.edu</p>
+                        <p style="color:#8ea2c0; font-size:0.75rem; margin:0 0 10px 0;">From: results@ieltsessentials.com<br>Date: May 5, 2020<br>To: samrudh.sharma@amarillohigh.edu</p>
                         <p style="margin:5px 0; line-height:1.5; color:#eef1f6; font-size:0.8rem;">
                             Dear Candidate,<br><br>
                             Your IELTS Academic test results are now available. You have achieved your <strong>highest target score</strong>:

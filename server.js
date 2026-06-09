@@ -66,7 +66,10 @@ const ALLOWED_STATIC_FILES = [
     'birthday_5.png',
     'herobrine.png',
     'crossword.js',
-    'crossword.css'
+    'crossword.css',
+    'buddy_crayon.png',
+    'house_crayon.png',
+    'sun_moon_crayon.png'
 ];
 
 // Secure Static Middleware (restricts access to server.js, package.json, scores.json, etc.)
