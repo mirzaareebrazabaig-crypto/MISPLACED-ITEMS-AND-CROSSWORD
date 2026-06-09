@@ -144,19 +144,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function startSoundscape(age) {
-        if (!audioCtx || isMuted) return;
-        if (audioCtx.state === 'suspended') {
-            audioCtx.resume();
-        }
-        stopAllSynths();
-
-        if (age === 5) {
-            playAge5MusicBox();
-        } else if (age === 10) {
-            playAge10GameLofi();
-        } else if (age === 15) {
-            playAge15MelancholicDrone();
-        }
+        // Background music disabled entirely by user request
+        return;
     }
 
     // Age 5 (2010): Soft Lullaby Music Box

@@ -292,7 +292,7 @@ const LORE_DATA = {
   'corgi-toy': `
                     <div class="photo-closeup-container">
                         <div class="photo-matting" style="background:#fff; max-width: 320px;">
-                            <img src="buddy.png" alt="Stuffed Buddy Corgi">
+                            <img src="buddy_puppy.png" alt="Stuffed Buddy Corgi">
                             <div class="photo-caption" style="font-family:'Caveat';">Buddy</div>
                         </div>
                         <p style="text-align:center; color:var(--text-muted); line-height:1.6; max-width:480px; margin-top:10px;">
@@ -1093,7 +1093,13 @@ const LORE_DATA = {
                                 "He didn't even speak once during the group project."
                             </div>
                             <div style="background:#c1121f; padding:10px; border-radius:8px; align-self:flex-end; max-width:80%; color:#fff;">
-                                "Yeah, and now everyone in the corridors is calling him Stinky Sam after that lunchbox incident. So embarrassing."
+                                "Wait, did you hear about his lunchbox today? It smelled so bad they had to open all the windows."
+                            </div>
+                            <div style="background:#2b2d42; padding:10px; border-radius:8px; align-self:flex-start; max-width:80%;">
+                                "Yeah, William started calling him Stinky Sam! Everyone was laughing."
+                            </div>
+                            <div style="background:#c1121f; padding:10px; border-radius:8px; align-self:flex-end; max-width:80%; color:#fff;">
+                                "Now everyone in the corridors is calling him Stinky Sam. So embarrassing."
                             </div>
                         </div>
                         <div style="font-size:0.8rem; color:#8d99ae; text-align:center; margin-top:10px;">
