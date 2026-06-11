@@ -2,6 +2,65 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <script>
+        // Automation, AI Agent, and DevTools Deterrents (AI Proofing)
+        (function() {
+            const isAutomated = navigator.webdriver || 
+                                window.domAutomation || 
+                                window.domAutomationController || 
+                                window._phantom || 
+                                window.callPhantom || 
+                                /HeadlessChrome/.test(navigator.userAgent);
+            if (isAutomated) {
+                document.documentElement.innerHTML = "<div style='display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;background:#0d0d11;color:#e07a5f;font-family:monospace;'><h1>ACCESS DENIED</h1><p>Automated agents and AI scrapers are blocked.</p></div>";
+                throw new Error("Automation detected.");
+            }
+
+            document.addEventListener('contextmenu', e => e.preventDefault());
+            document.addEventListener('copy', e => e.preventDefault());
+            document.addEventListener('paste', e => e.preventDefault());
+            document.addEventListener('selectstart', e => e.preventDefault());
+            
+            document.addEventListener('keydown', e => {
+                if (e.key === 'F12') {
+                    e.preventDefault();
+                    return false;
+                }
+                if (e.ctrlKey && e.shiftKey && ['I', 'J', 'C', 'K'].includes(e.key.toUpperCase())) {
+                    e.preventDefault();
+                    return false;
+                }
+                if (e.metaKey && e.altKey && ['I', 'J', 'C', 'K'].includes(e.key.toUpperCase())) {
+                    e.preventDefault();
+                    return false;
+                }
+                if ((e.ctrlKey && e.key.toLowerCase() === 'u') || (e.metaKey && e.altKey && e.key.toLowerCase() === 'u')) {
+                    e.preventDefault();
+                    return false;
+                }
+                if ((e.ctrlKey && e.key.toLowerCase() === 's') || (e.metaKey && e.key.toLowerCase() === 's')) {
+                    e.preventDefault();
+                    return false;
+                }
+            });
+
+            setInterval(() => {
+                (function() {}).constructor("debugger")();
+            }, 100);
+
+            // Size-based DevTools detection (detects docked developer panel)
+            function checkDevTools() {
+                const threshold = 160;
+                const devtoolsOpen = (window.outerWidth - window.innerWidth > threshold) || 
+                                     (window.outerHeight - window.innerHeight > threshold);
+                if (devtoolsOpen) {
+                    document.documentElement.innerHTML = "<div style='display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;background:#0d0d11;color:#e07a5f;font-family:monospace;'><h1>ACCESS DENIED</h1><p>Developer tools inspection is disabled.</p></div>";
+                    window.location.href = "about:blank";
+                }
+            }
+            setInterval(checkDevTools, 500);
+        })();
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sam's Bedroom: An Interactive Exploration of Memory</title>
     <link rel="icon" type="image/png" href="favicon.png">
@@ -1006,7 +1065,7 @@
                     </div>
 
                     <!-- Personal Computer Hotspot -->
-                    <div class="hotspot clickable" style="left: 81%; top: 35%; width: 10%; height: 13%;" data-item="computer-15-unlocked" title="Personal Computer">
+                    <div class="hotspot clickable" style="left: 81%; top: 35%; width: 10%; height: 13%;" data-item="computer-15" title="Personal Computer">
                         <svg viewBox="0 0 100 80">
                             <rect x="15" y="10" width="70" height="48" rx="4" fill="#2d2d30" stroke="#1a1a1c" stroke-width="2"/>
                             <rect x="19" y="14" width="62" height="40" rx="1" fill="#1e1e1e"/>
@@ -1246,6 +1305,14 @@
 
     <!-- Warm Flickering Spotlight Layer -->
     <div class="desk-light"></div>
+
+    <!-- Full-screen Retro OS Container -->
+    <div id="fullscreen-os-container" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 999999; background: #000; overflow: hidden;">
+        <iframe id="fullscreen-os-iframe" src="" style="width: 100%; height: 100%; border: none;" frameborder="0"></iframe>
+    </div>
+    <div id="fullscreen-os-timer" style="display: none; position: fixed; top: 12px; right: 12px; z-index: 1000000; font-family: 'Courier New', Courier, monospace; font-size: 1.1rem; font-weight: bold; background: #c0c0c0; border: 2px solid; border-color: #fff #808080 #808080 #fff; padding: 4px 8px; color: #000; box-shadow: 1px 1px 0 #000; pointer-events: none;">
+        00:00
+    </div>
 
     <!-- App Logic -->
     <script src="app.js"></script>

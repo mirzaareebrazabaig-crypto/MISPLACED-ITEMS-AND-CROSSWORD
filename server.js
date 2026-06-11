@@ -42,6 +42,7 @@ function verifySessionToken(token) {
 // Middleware
 app.use(cors());
 app.use(express.json());
+app.use('/win93', express.static(path.join(__dirname, 'win93')));
 
 // List of allowed public files
 const ALLOWED_STATIC_FILES = [
@@ -407,12 +408,143 @@ app.get('/api/lore/:itemId', (req, res) => {
 
 // API: Verify Computer Recovery Password
 app.post('/api/verify-computer-password', (req, res) => {
-    const { password } = req.body;
-    if (password && password.trim().toLowerCase() === gameData.COMPUTER_PASSWORD) {
-        res.json({ success: true });
-    } else {
-        res.json({ success: false });
+    const { password, token } = req.body;
+    
+    // First verify password
+    if (!password || password.trim().toLowerCase() !== gameData.COMPUTER_PASSWORD) {
+        return res.json({ success: false, error: 'INVALID PASSWORD' });
     }
+
+    // Next check token and crossword status
+    if (!token) {
+        return res.json({ success: false, error: 'CROSSWORD NOT COMPLETED' });
+    }
+
+    const session = verifySessionToken(token);
+    if (!session) {
+        return res.json({ success: false, error: 'INVALID SESSION' });
+    }
+
+    const scores = readScores();
+    const teamRecord = scores.find(s => s.token === token);
+    
+    if (!teamRecord || !teamRecord.crossword || !teamRecord.crossword.completed) {
+        return res.json({ success: false, error: 'CROSSWORD NOT COMPLETED' });
+    }
+
+    teamRecord.computerUnlocked = true;
+    writeScores(scores);
+
+    res.json({ success: true });
+});
+
+// API: Get Computer File Contents (Securely fetches decrypted VFS files)
+app.post('/api/computer-file/:fileKey', (req, res) => {
+    const { token } = req.body;
+    const fileKey = req.params.fileKey;
+
+    if (!token || !fileKey) {
+        return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    const session = verifySessionToken(token);
+    if (!session) {
+        return res.status(403).json({ error: 'Invalid or missing session token.' });
+    }
+
+    const scores = readScores();
+    const teamRecord = scores.find(s => s.token === token);
+    
+    if (!teamRecord) {
+        return res.status(404).json({ error: 'Team session record not found.' });
+    }
+
+    // Verify computer has been unlocked
+    if (!teamRecord.computerUnlocked) {
+        return res.status(403).json({ error: 'ACCESS DENIED: Computer is locked.' });
+    }
+
+    // Return the secure file content
+    const html = gameData.COMPUTER_FILES[fileKey];
+    if (!html) {
+        return res.status(404).json({ error: 'File not found.' });
+    }
+
+    res.json({ html });
+});
+
+// API: Get sub-item detail content dynamically (prevents hardcoding in app.js)
+app.post('/api/sub-item', (req, res) => {
+    const { parentId, itemId } = req.body;
+    if (!parentId || !itemId) {
+        return res.status(400).json({ error: 'Missing parentId or itemId' });
+    }
+
+    let data = null;
+    if (parentId === 'schoolbag') {
+        data = gameData.SCHOOLBAG_ITEMS[itemId];
+    } else if (parentId === 'posters-collection') {
+        data = gameData.POSTER_ITEMS[itemId];
+    } else if (parentId === 'bookshelf-cupboard') {
+        data = gameData.CUPBOARD_BOOKS[itemId];
+    } else if (parentId === 'bookshelf-cupboard-yearbook') {
+        data = gameData.yearbookStudents[itemId];
+    } else if (parentId === 'picture-book') {
+        const pageIdx = parseInt(itemId, 10);
+        data = gameData.pictureBookPages[pageIdx];
+    } else if (parentId === 'crt-tv-selection') {
+        data = gameData.dvdVideos[itemId];
+    } else if (parentId === 'cassette-tape') {
+        const idx = parseInt(itemId, 10);
+        data = gameData.cassetteSubtitles[idx];
+    }
+
+    if (data === undefined || data === null) {
+        return res.status(404).json({ error: 'Sub-item not found' });
+    }
+
+    res.json({ data });
+});
+
+// API: Submit Google Form Final Time
+app.post('/api/submit-final-time', (req, res) => {
+    const { token } = req.body;
+
+    if (!token) {
+        return res.status(400).json({ error: 'Missing required session token' });
+    }
+
+    const session = verifySessionToken(token);
+    if (!session) {
+        return res.status(403).json({ error: 'Invalid or missing session token.' });
+    }
+
+    const { startTime } = session;
+    const scores = readScores();
+    const teamRecord = scores.find(s => s.token === token);
+
+    if (!teamRecord) {
+        return res.status(404).json({ error: 'Team record not found.' });
+    }
+
+    // Verify they have completed crossword first
+    if (!teamRecord.crossword || !teamRecord.crossword.completed) {
+        return res.status(400).json({ error: 'Crossword must be completed before submitting final time.' });
+    }
+
+    if (teamRecord.final && teamRecord.final.completed) {
+        return res.json({ success: true, formatted: teamRecord.final.formatted });
+    }
+
+    const totalTime = Date.now() - startTime;
+    teamRecord.final = {
+        completed: true,
+        time: totalTime,
+        formatted: formatTime(totalTime)
+    };
+
+    writeScores(scores);
+    res.json({ success: true, formatted: formatTime(totalTime) });
 });
 
 // API: Clear Scores (Requires Session Token)

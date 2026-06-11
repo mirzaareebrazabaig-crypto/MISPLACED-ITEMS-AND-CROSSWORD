@@ -791,6 +791,14 @@ body {
     box-sizing: border-box;
 }
 
+.modal-content.closeup-content.computer-modal-active {
+    width: 1040px;
+    max-width: 95vw;
+    height: 670px;
+    max-height: 90vh;
+    padding: 15px;
+}
+
 /* Crayon Drawings Detail */
 .crayon-drawing-closeup {
     display: flex;
@@ -1774,6 +1782,11 @@ body {
 
 .draggable:active {
     cursor: grabbing !important;
+}
+
+body.rooms-locked-active .draggable,
+body.rooms-locked-active .draggable:active {
+    cursor: pointer !important;
 }
 
 .dragging {

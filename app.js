@@ -3,6 +3,112 @@
    ========================================== */
 
 document.addEventListener('DOMContentLoaded', () => {
+    
+    // Custom styled Alert Dialog system
+    window.showCustomAlert = function(message, callback) {
+        let alertOverlay = document.getElementById('custom-alert-overlay');
+        if (!alertOverlay) {
+            alertOverlay = document.createElement('div');
+            alertOverlay.id = 'custom-alert-overlay';
+            alertOverlay.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100vw;
+                height: 100vh;
+                background: rgba(10, 8, 6, 0.85);
+                backdrop-filter: blur(6px);
+                -webkit-backdrop-filter: blur(6px);
+                z-index: 9999999;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                opacity: 0;
+                transition: opacity 0.3s ease;
+            `;
+            
+            const alertBox = document.createElement('div');
+            alertBox.style.cssText = `
+                background: #ebdcb9;
+                background-image: url('assets/aged_newspaper.svg');
+                background-size: cover;
+                border: 2px solid #5a4225;
+                border-radius: 4px;
+                padding: 30px;
+                width: 90%;
+                max-width: 460px;
+                box-shadow: 0 15px 40px rgba(0,0,0,0.8), inset 0 0 20px rgba(0,0,0,0.05);
+                font-family: 'Special Elite', cursive;
+                color: #382818;
+                text-align: center;
+                transform: scale(0.9) rotate(-1deg);
+                transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            `;
+            
+            const alertText = document.createElement('p');
+            alertText.id = 'custom-alert-text';
+            alertText.style.cssText = `
+                font-size: 1.15rem;
+                line-height: 1.6;
+                margin-bottom: 25px;
+                color: #2b1d11;
+            `;
+            
+            const alertBtn = document.createElement('button');
+            alertBtn.id = 'custom-alert-btn';
+            alertBtn.innerText = 'OK';
+            alertBtn.style.cssText = `
+                background-color: #382818;
+                color: #dfd7c0;
+                border: 1px solid #1a1512;
+                padding: 10px 35px;
+                font-family: 'Special Elite', cursive;
+                font-size: 0.95rem;
+                letter-spacing: 1.5px;
+                cursor: pointer;
+                transition: background-color 0.2s, transform 0.1s, box-shadow 0.2s;
+                box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            `;
+            
+            alertBtn.addEventListener('mouseover', () => {
+                alertBtn.style.backgroundColor = '#4e3822';
+            });
+            alertBtn.addEventListener('mouseout', () => {
+                alertBtn.style.backgroundColor = '#382818';
+            });
+            alertBtn.addEventListener('active', () => {
+                alertBtn.style.transform = 'translateY(1px)';
+            });
+            
+            alertBox.appendChild(alertText);
+            alertBox.appendChild(alertBtn);
+            alertOverlay.appendChild(alertBox);
+            document.body.appendChild(alertOverlay);
+        }
+        
+        const alertText = document.getElementById('custom-alert-text');
+        const alertBtn = document.getElementById('custom-alert-btn');
+        const alertBox = alertOverlay.firstChild;
+        
+        alertText.innerText = message;
+        
+        const newAlertBtn = alertBtn.cloneNode(true);
+        alertBtn.parentNode.replaceChild(newAlertBtn, alertBtn);
+        
+        newAlertBtn.addEventListener('click', () => {
+            alertOverlay.style.opacity = '0';
+            alertBox.style.transform = 'scale(0.9) rotate(-1deg)';
+            setTimeout(() => {
+                alertOverlay.style.display = 'none';
+                if (callback) callback();
+            }, 300);
+        });
+        
+        alertOverlay.style.display = 'flex';
+        alertOverlay.offsetHeight;
+        alertOverlay.style.opacity = '1';
+        alertBox.style.transform = 'scale(1) rotate(-0.5deg)';
+    };
     // --- Global Game State ---
     window.gameState = {
         teamName: '',
@@ -45,7 +151,70 @@ document.addEventListener('DOMContentLoaded', () => {
     let gameStarted = false;
     let timerInterval = null;
     let gameStartTime = 0;
-    let isComputerUnlocked = true;
+    let isComputerUnlocked = false;
+
+    function startGameTimer(startTime) {
+        if (timerInterval) clearInterval(timerInterval);
+        gameStartTime = startTime;
+        gameStarted = true;
+        
+        const timerEl = document.getElementById('game-timer');
+        if (timerEl) {
+            if (!document.body.classList.contains('crossword-mode-active')) {
+                timerEl.style.display = 'block';
+            } else {
+                timerEl.style.display = 'none';
+            }
+        }
+        
+        const fsContainer = document.getElementById('fullscreen-os-container');
+        const fsTimerEl = document.getElementById('fullscreen-os-timer');
+        if (fsTimerEl) {
+            if (fsContainer && fsContainer.style.display === 'block') {
+                fsTimerEl.style.display = 'block';
+            } else {
+                fsTimerEl.style.display = 'none';
+            }
+        }
+        
+        timerInterval = setInterval(() => {
+            const elapsed = Date.now() - gameStartTime;
+            const m = Math.floor(elapsed / 60000).toString().padStart(2, '0');
+            const s = Math.floor((elapsed % 60000) / 1000).toString().padStart(2, '0');
+            const timeString = `${m}:${s}`;
+            
+            if (timerEl) timerEl.textContent = timeString;
+            
+            const crosswordTimerEl = document.getElementById('crossword-timer');
+            if (crosswordTimerEl) {
+                crosswordTimerEl.textContent = timeString;
+            }
+            
+            if (fsTimerEl) {
+                fsTimerEl.textContent = timeString;
+            }
+        }, 1000);
+    }
+
+    function showFullscreenOS() {
+        const fsContainer = document.getElementById('fullscreen-os-container');
+        const fsIframe = document.getElementById('fullscreen-os-iframe');
+        const fsTimerEl = document.getElementById('fullscreen-os-timer');
+        const timerEl = document.getElementById('game-timer');
+        
+        if (fsContainer && fsIframe) {
+            fsContainer.style.display = 'block';
+            if (!fsIframe.src || !fsIframe.src.endsWith('/win93/index.html')) {
+                fsIframe.src = '/win93/index.html';
+            }
+        }
+        if (fsTimerEl) {
+            fsTimerEl.style.display = 'block';
+        }
+        if (timerEl) {
+            timerEl.style.display = 'none';
+        }
+    }
 
     function applyScenario(startingPlacements) {
         if (!startingPlacements) return;
@@ -66,6 +235,55 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    function saveGameState() {
+        try {
+            const placements = [];
+            document.querySelectorAll('.draggable').forEach(el => {
+                const inInventory = el.classList.contains('in-inventory');
+                const parentId = el.parentNode ? el.parentNode.id : '';
+                placements.push({
+                    item: el.dataset.item,
+                    inInventory: inInventory,
+                    parentId: parentId,
+                    left: el.style.left,
+                    top: el.style.top,
+                    position: el.style.position
+                });
+            });
+
+            const crosswordInputs = {};
+            document.querySelectorAll('.cell-input').forEach(input => {
+                const row = input.dataset.row;
+                const col = input.dataset.col;
+                if (row !== undefined && col !== undefined && input.value !== "") {
+                    crosswordInputs[`${row}_${col}`] = input.value;
+                }
+            });
+
+            const stateToSave = {
+                teamName: window.gameState.teamName,
+                sessionToken: window.gameState.sessionToken,
+                startTime: window.gameState.startTime,
+                roomsLocked: window.gameState.roomsLocked,
+                roomsScore: window.gameState.roomsScore,
+                roomsTime: window.gameState.roomsTime,
+                crosswordCompleted: window.gameState.crosswordCompleted,
+                totalTime: window.gameState.totalTime,
+                secretCells: window.gameState.secretCells,
+                isComputerUnlocked: isComputerUnlocked,
+                currentAge: currentAge,
+                currentMode: document.body.classList.contains('crossword-mode-active') ? 'crossword' : 'rooms',
+                placements: placements,
+                crosswordInputs: crosswordInputs
+            };
+
+            localStorage.setItem('project_rewind_game_state', JSON.stringify(stateToSave));
+        } catch (e) {
+            console.error('Failed to save game state to localStorage:', e);
+        }
+    }
+    window.saveGameState = saveGameState;
+
     async function startSession(teamName) {
         try {
             const res = await fetch('/api/start-session', {
@@ -76,7 +294,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await res.json();
             if (res.ok) {
                 window.gameState.sessionToken = data.token;
+                window.gameState.teamName = teamName;
+                window.gameState.startTime = Date.now();
                 applyScenario(data.startingPlacements);
+                saveGameState();
                 return true;
             } else {
                 alert(data.error || 'Failed to start session');
@@ -407,23 +628,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Start game timer only ONCE when they first close the help modal
         if (!gameStartTime) {
-            gameStarted = true;
-            gameStartTime = Date.now();
-            const timerEl = document.getElementById('game-timer');
-            timerEl.style.display = 'block';
-            
-            timerInterval = setInterval(() => {
-                const elapsed = Date.now() - gameStartTime;
-                const m = Math.floor(elapsed / 60000).toString().padStart(2, '0');
-                const s = Math.floor((elapsed % 60000) / 1000).toString().padStart(2, '0');
-                const timeString = `${m}:${s}`;
-                
-                timerEl.textContent = timeString;
-                const crosswordTimerEl = document.getElementById('crossword-timer');
-                if (crosswordTimerEl) {
-                    crosswordTimerEl.textContent = timeString;
-                }
-            }, 1000);
+            startGameTimer(Date.now());
             
             // Auto-start audio if they haven't explicitly muted
             if (!isMuted && !audioCtx) {
@@ -478,7 +683,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.querySelectorAll('.draggable').forEach(item => {
         item.addEventListener('pointerdown', (e) => {
-            if (window.gameState.roomsLocked) return;
+            if (window.gameState.roomsLocked) {
+                openCloseup(item.dataset.item);
+                return;
+            }
             if(e.button !== 0 && e.pointerType === 'mouse') return; // only left click
             isPointerDown = true;
             hasMoved = false;
@@ -615,6 +823,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
         
+        saveGameState();
         draggedItem = null;
     });
 
@@ -669,6 +878,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Successfully submitted Rooms! Lock them.
             window.gameState.roomsLocked = true;
+            document.body.classList.add('rooms-locked-active');
             window.gameState.roomsScore = data.score;
             window.gameState.roomsTime = data.formatted;
 
@@ -686,8 +896,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 btnHeaderCrossword.style.display = 'flex';
             }
 
-            alert(`Room placements locked in successfully! Score: ${data.score}%. Proceeding to Part 2: Memory Crossword.`);
-            switchMode('crossword');
+            window.showCustomAlert("Solve the crossword to get the characters of Sam's computer password", () => {
+                switchMode('crossword');
+            });
 
         } catch (err) {
             console.error('Error submitting rooms score:', err);
@@ -722,6 +933,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Switch Audio Track
         startSoundscape(age);
+        saveGameState();
     }
 
     [5, 10, 15].forEach(age => {
@@ -751,8 +963,10 @@ document.addEventListener('DOMContentLoaded', () => {
             // Header buttons updates
             if (btnHeaderRooms) btnHeaderRooms.style.display = 'none';
             if (window.gameState.roomsLocked) {
+                document.body.classList.add('rooms-locked-active');
                 if (btnHeaderCrossword) btnHeaderCrossword.style.display = 'flex';
             } else {
+                document.body.classList.remove('rooms-locked-active');
                 if (btnHeaderCrossword) btnHeaderCrossword.style.display = 'none';
             }
             
@@ -767,11 +981,6 @@ document.addEventListener('DOMContentLoaded', () => {
             crosswordLayout.style.display = 'none';
             viewport.classList.remove('crossword-active');
             document.body.classList.remove('crossword-mode-active');
-            
-            // Automatically open help/description modal when returning from crossword
-            if (helpModal) {
-                helpModal.classList.add('active');
-            }
         } else if (mode === 'crossword') {
             // Header title updates - hide age indicator and change title
             if (roomAgeIndicator) roomAgeIndicator.style.display = 'none';
@@ -796,6 +1005,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 window.initCrosswordGrid();
             }
         }
+        saveGameState();
     }
     window.switchMode = switchMode; // Expose globally
 
@@ -890,6 +1100,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await res.json();
             
             closeupBody.innerHTML = data.html;
+            if (itemId === 'computer-15-unlocked') {
+                closeupModal.classList.add('computer-modal-active');
+            } else {
+                closeupModal.classList.remove('computer-modal-active');
+            }
             closeupModal.classList.add('active');
 
             // Post-render binding hooks and data assignment
@@ -990,6 +1205,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     function cleanupCloseupEffects() {
+        closeupModal.classList.remove('computer-modal-active');
         if (dvdTimer) {
             clearInterval(dvdTimer);
             dvdTimer = null;
@@ -1007,8 +1223,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
             let item = e.currentTarget.dataset.item;
-            if (item === 'computer-15' && isComputerUnlocked) {
-                item = 'computer-15-unlocked';
+            if (item === 'computer-15' || item === 'computer-15-unlocked') {
+                if (isComputerUnlocked) {
+                    showFullscreenOS();
+                    return;
+                } else {
+                    openCloseup('computer-15');
+                    return;
+                }
             }
             openCloseup(item);
         });
@@ -1017,30 +1239,40 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ==========================================
     // COMPLEX CLOSEUP VIEWER CONTROLLERS
-    // ==========================================
-
-    // 1. Picture Book Flip Pages
-    function updatePictureBook() {
+    // ======================================    // 1. Picture Book Flip Pages
+    async function updatePictureBook() {
         const pagesWrapper = document.getElementById('book-pages-wrapper');
         if (!pagesWrapper) return;
         
-        const data = pictureBookPages[currentBookPage];
-        if (!data) return;
-        pagesWrapper.innerHTML = `
-            <div class="book-page-side left-side">
-                <p>${data.left}</p>
-            </div>
-            <div class="book-page-side right-side">
-                <p>${data.right}</p>
-            </div>
-        `;
+        pagesWrapper.innerHTML = `<div style="text-align:center; padding:50px; color:#888; width:100%;">Loading page...</div>`;
+        try {
+            const res = await fetch('/api/sub-item', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ parentId: 'picture-book', itemId: String(currentBookPage) })
+            });
+            const result = await res.json();
+            const data = result.data;
+            if (data) {
+                pagesWrapper.innerHTML = `
+                    <div class="book-page-side left-side">
+                        <p>${data.left}</p>
+                    </div>
+                    <div class="book-page-side right-side">
+                        <p>${data.right}</p>
+                    </div>
+                `;
+            }
+        } catch (e) {
+            pagesWrapper.innerHTML = `<div style="text-align:center; padding:50px; color:#b32a2a; width:100%;">Error loading page.</div>`;
+        }
         
         document.getElementById('btn-prev-page').disabled = (currentBookPage === 0);
         document.getElementById('btn-next-page').disabled = (currentBookPage === pictureBookPages.length - 1);
     }
 
     // 2. TV console DVD Simulator
-    function updateTV() {
+    async function updateTV() {
         const tvScreen = document.getElementById('tv-screen-large');
         if (!tvScreen) return;
 
@@ -1049,66 +1281,98 @@ document.addEventListener('DOMContentLoaded', () => {
             dvdTimer = null;
         }
 
-        const data = dvdVideos[activeDvd];
-        if (!data) return;
-        
         tvScreen.innerHTML = `<div class="tv-static"></div><div style="position:absolute; top:20px; left:20px; font-family:monospace; color:#0f0;">LOADING DVD...</div>`;
 
         triggerBeep(300, 0.1);
 
-        setTimeout(() => {
-            if (activeDvd === 'dvd-3') {
-                // Bullying clip (secret clip)
-                tvScreen.innerHTML = `
-                    <div class="tv-gameplay-simulation" style="background:#0c0000; justify-content:space-between; padding:20px;">
-                        <span style="font-family:monospace; color:#d90429; font-weight:bold; font-size:0.75rem; text-align:left; width:100%;">● REC [SECRET - 2015]</span>
-                        <div style="font-size:0.9rem; line-height:1.5; color:#d90429; font-family:'Architects Daughter';">
-                            ${data.desc}
-                        </div>
-                        <span style="font-family:monospace; color:#d90429; font-size:0.7rem; width:100%; text-align:right;">00:14 / 00:45</span>
-                    </div>
-                `;
-            } else {
-                let seconds = 0;
-                function drawMinecraftGameplay() {
+        try {
+            const res = await fetch('/api/sub-item', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ parentId: 'crt-tv-selection', itemId: activeDvd })
+            });
+            const result = await res.json();
+            const data = result.data;
+
+            setTimeout(() => {
+                if (!data) return;
+                if (activeDvd === 'dvd-3') {
+                    // Bullying clip (secret clip)
                     tvScreen.innerHTML = `
-                        <div class="tv-gameplay-simulation" style="background:#222; justify-content:space-between; padding:20px; color:#a3b18a;">
-                            <span style="font-family:monospace; color:#a3b18a; font-size:0.75rem; text-align:left; width:100%;">${data.title}</span>
-                            <div style="font-size:0.9rem; line-height:1.5; font-family:'Outfit'; color:#fff;">
-                                ${data.desc}<br>
-                                <span style="color:#a3b18a; font-size:0.75rem;">Time elapsed: ${seconds}s</span>
+                        <div class="tv-gameplay-simulation" style="background:#0c0000; justify-content:space-between; padding:20px;">
+                            <span style="font-family:monospace; color:#d90429; font-weight:bold; font-size:0.75rem; text-align:left; width:100%;">● REC [SECRET - 2015]</span>
+                            <div style="font-size:0.9rem; line-height:1.5; color:#d90429; font-family:'Architects Daughter';">
+                                ${data.desc}
                             </div>
-                            <span style="font-family:monospace; color:#a3b18a; font-size:0.7rem; width:100%; text-align:right;">${data.status}</span>
+                            <span style="font-family:monospace; color:#d90429; font-size:0.7rem; width:100%; text-align:right;">00:14 / 00:45</span>
                         </div>
                     `;
-                }
+                } else {
+                    let seconds = 0;
+                    function drawMinecraftGameplay() {
+                        tvScreen.innerHTML = `
+                            <div class="tv-gameplay-simulation" style="background:#222; justify-content:space-between; padding:20px; color:#a3b18a;">
+                                <span style="font-family:monospace; color:#a3b18a; font-size:0.75rem; text-align:left; width:100%;">${data.title}</span>
+                                <div style="font-size:0.9rem; line-height:1.5; font-family:'Outfit'; color:#fff;">
+                                    ${data.desc}<br>
+                                    <span style="color:#a3b18a; font-size:0.75rem;">Time elapsed: ${seconds}s</span>
+                                </div>
+                                <span style="font-family:monospace; color:#a3b18a; font-size:0.7rem; width:100%; text-align:right;">${data.status}</span>
+                            </div>
+                        `;
+                    }
 
-                drawMinecraftGameplay();
-                dvdTimer = setInterval(() => {
-                    seconds++;
                     drawMinecraftGameplay();
-                    if (seconds % 4 === 0) triggerBeep(440, 0.08);
-                }, 1000);
-            }
-        }, 1200);
+                    dvdTimer = setInterval(() => {
+                        seconds++;
+                        drawMinecraftGameplay();
+                        if (seconds % 4 === 0) triggerBeep(440, 0.08);
+                    }, 1000);
+                }
+            }, 1200);
+        } catch (e) {
+            tvScreen.innerHTML = `<div style="text-align:center; padding:50px; color:#b32a2a;">Error loading DVD.</div>`;
+        }
     }
 
     // 3. Schoolbag Items Explorer (2015)
-    function showSchoolbagItem(item) {
+    async function showSchoolbagItem(item) {
         const detailView = document.getElementById('schoolbag-details-view');
         if (!detailView) return;
-        detailView.innerHTML = schoolbagItems[item] || '';
+        detailView.innerHTML = '<div style="color:#666; font-family:monospace; padding:20px; text-align:center;">Loading...</div>';
+        try {
+            const res = await fetch('/api/sub-item', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ parentId: 'schoolbag', itemId: item })
+            });
+            const result = await res.json();
+            detailView.innerHTML = result.data || '';
+        } catch (e) {
+            detailView.innerHTML = '<div style="color:#b32a2a; font-family:monospace; padding:20px; text-align:center;">Error loading item.</div>';
+        }
     }
 
     // 4. Posters Explorer (Age 10)
-    function showPosterItem(item) {
+    async function showPosterItem(item) {
         const detailView = document.getElementById('poster-details-view');
         if (!detailView) return;
-        detailView.innerHTML = posterItems[item] || '';
+        detailView.innerHTML = '<div style="color:#666; font-family:monospace; padding:20px; text-align:center;">Loading...</div>';
+        try {
+            const res = await fetch('/api/sub-item', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ parentId: 'posters-collection', itemId: item })
+            });
+            const result = await res.json();
+            detailView.innerHTML = result.data || '';
+        } catch (e) {
+            detailView.innerHTML = '<div style="color:#b32a2a; font-family:monospace; padding:20px; text-align:center;">Error loading poster.</div>';
+        }
     }
 
     // 5. Bookshelf / Cupboard Books Explorer (2020)
-    function showCupboardBook(book) {
+    async function showCupboardBook(book) {
         const detailView = document.getElementById('cupboard-detail-view');
         if (!detailView) return;
 
@@ -1121,7 +1385,18 @@ document.addEventListener('DOMContentLoaded', () => {
             populateYearbookIndex();
             loadYearbookPage();
         } else {
-            detailView.innerHTML = cupboardBooks[book] || '';
+            detailView.innerHTML = '<div style="color:#666; font-family:monospace; padding:20px; text-align:center;">Loading...</div>';
+            try {
+                const res = await fetch('/api/sub-item', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ parentId: 'bookshelf-cupboard', itemId: book })
+                });
+                const result = await res.json();
+                detailView.innerHTML = result.data || '';
+            } catch (e) {
+                detailView.innerHTML = '<div style="color:#b32a2a; font-family:monospace; padding:20px; text-align:center;">Error loading book.</div>';
+            }
         }
     }
 
@@ -1170,58 +1445,70 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    function loadYearbookPage() {
+    async function loadYearbookPage() {
         const viewer = document.getElementById('yb-viewer');
         if (!viewer) return;
 
-        const data = yearbookStudents[currentYearbookLetter];
-        
-        if (!data) {
-            viewer.innerHTML = `<div style="text-align:center; padding:100px; color:#888;">Empty Page</div>`;
-            viewer.className = "yearbook-page-viewer";
-            return;
-        }
-
+        viewer.innerHTML = `<div style="text-align:center; padding:100px; color:#888;">Loading page...</div>`;
         viewer.className = "yearbook-page-viewer";
-        if (data.isCrumpled) {
-            viewer.classList.add('crumpled');
-        }
 
-        let photoHtml = '';
-        if (data.photoFile) {
-            photoHtml = `<div class="student-photo-slot" style="background-image: url('${data.photoFile}')">`;
-        } else {
-            photoHtml = `<div class="student-photo-slot"><svg viewBox="0 0 140 180" width="100%"><rect width="140" height="180" fill="${data.photoColor}"/><circle cx="70" cy="70" r="28" fill="white" opacity="0.3"/><text x="45" y="140" font-family="sans-serif" font-size="12" fill="white" opacity="0.5">STUDENT</text></svg>`;
-        }
-        
-        if (data.isVandalised) {
-            photoHtml += `<div class="vandalised-photo-overlay"></div>`;
-        }
-        photoHtml += `</div>`;
+        try {
+            const res = await fetch('/api/sub-item', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ parentId: 'bookshelf-cupboard-yearbook', itemId: currentYearbookLetter })
+            });
+            const result = await res.json();
+            const data = result.data;
+            
+            if (!data) {
+                viewer.innerHTML = `<div style="text-align:center; padding:100px; color:#888;">Empty Page</div>`;
+                return;
+            }
 
-        let quoteContent = `<p class="student-quote">${data.quote}</p>`;
-        if (data.isSam) {
-            quoteContent = `
-                <p class="student-quote" style="color:#555; font-weight:bold;">${data.quote}</p>
-                <div class="hate-scribble">${data.hateComment}</div>
-            `;
-        }
+            viewer.className = "yearbook-page-viewer";
+            if (data.isCrumpled) {
+                viewer.classList.add('crumpled');
+            }
 
-        viewer.innerHTML = `
-            ${data.isCrumpled ? '<div class="crumpled-shatter"></div>' : ''}
-            <div class="yearbook-student-profile">
-                ${photoHtml}
-                <div class="yearbook-student-info">
-                    <h4>${data.name}</h4>
-                    ${quoteContent}
-                    ${data.isVandalised ? '<p style="color:#b32a2a; font-family:\'Architects Daughter\'; font-weight:bold; font-size:0.9rem; margin-top:20px;">[VANDALISED BY SAM]</p>' : ''}
-                    ${data.notes ? `<p style="font-size:0.75rem; color:#888; margin-top:5px;">Note: ${data.notes}</p>` : ''}
+            let photoHtml = '';
+            if (data.photoFile) {
+                photoHtml = `<div class="student-photo-slot" style="background-image: url('${data.photoFile}')">`;
+            } else {
+                photoHtml = `<div class="student-photo-slot"><svg viewBox="0 0 140 180" width="100%"><rect width="140" height="180" fill="${data.photoColor}"/><circle cx="70" cy="70" r="28" fill="white" opacity="0.3"/><text x="45" y="140" font-family="sans-serif" font-size="12" fill="white" opacity="0.5">STUDENT</text></svg>`;
+            }
+            
+            if (data.isVandalised) {
+                photoHtml += `<div class="vandalised-photo-overlay"></div>`;
+            }
+            photoHtml += `</div>`;
+
+            let quoteContent = `<p class="student-quote">${data.quote}</p>`;
+            if (data.isSam) {
+                quoteContent = `
+                    <p class="student-quote" style="color:#555; font-weight:bold;">${data.quote}</p>
+                    <div class="hate-scribble">${data.hateComment}</div>
+                `;
+            }
+
+            viewer.innerHTML = `
+                ${data.isCrumpled ? '<div class="crumpled-shatter"></div>' : ''}
+                <div class="yearbook-student-profile">
+                    ${photoHtml}
+                    <div class="yearbook-student-info">
+                        <h4>${data.name}</h4>
+                        ${quoteContent}
+                        ${data.isVandalised ? '<p style="color:#b32a2a; font-family:\'Architects Daughter\'; font-weight:bold; font-size:0.9rem; margin-top:20px;">[VANDALISED BY SAM]</p>' : ''}
+                        ${data.notes ? `<p style="font-size:0.75rem; color:#888; margin-top:5px;">Note: ${data.notes}</p>` : ''}
+                    </div>
                 </div>
-            </div>
-            <div class="yearbook-footer">
-                AMARILLO HIGH SCHOOL — Class of 2020
-            </div>
-        `;
+                <div class="yearbook-footer">
+                    AMARILLO HIGH SCHOOL — Class of 2020
+                </div>
+            `;
+        } catch (e) {
+            viewer.innerHTML = `<div style="text-align:center; padding:100px; color:#b32a2a;">Error loading page.</div>`;
+        }
     }
 
     // 7. Cassette Player Tape Controller
@@ -1306,101 +1593,30 @@ document.addEventListener('DOMContentLoaded', () => {
             const fileViewer = document.getElementById('comp-file-viewer');
             const fileItems = document.querySelectorAll('.comp-file-item');
             
-            const fileContents = {
-                acceptance: `
-                    <div style="width:100%; text-align:left; box-sizing:border-box;">
-                        <strong style="color:#2a9d8f; border-bottom:1px solid rgba(42,157,143,0.3); display:block; padding-bottom:5px; margin-bottom:10px;">EMAIL: stanford_admit.eml</strong>
-                        <p style="color:#8ea2c0; font-size:0.75rem; margin:0 0 10px 0;">From: admissions@stanford.edu<br>Date: May 12, 2020<br>To: samrudh.sharma@amarillohigh.edu</p>
-                        <p style="margin:5px 0; line-height:1.5; color:#eef1f6; font-size:0.8rem;">
-                            Dear Samrudh,<br><br>
-                            Congratulations! I am thrilled to inform you that you have been admitted to the <strong>Stanford University Class of 2024</strong>. 
-                        </p>
-                        <p style="margin:10px 0; line-height:1.5; color:#eef1f6; font-size:0.8rem;">
-                            Your outstanding academic record, combined with your pioneering research proposal in Neural Engineering, made you a standout candidate. We are proud to offer you a spot in our undergraduate program.
-                        </p>
-                        <p style="margin:10px 0 0 0; line-height:1.5; color:#ffd166; font-size:0.8rem; font-weight:bold;">
-                            Welcome to Stanford!
-                        </p>
-                    </div>`,
-                ielts: `
-                    <div style="width:100%; text-align:left; box-sizing:border-box;">
-                        <strong style="color:#2a9d8f; border-bottom:1px solid rgba(42,157,143,0.3); display:block; padding-bottom:5px; margin-bottom:10px;">EMAIL: ielts_report.eml</strong>
-                        <p style="color:#8ea2c0; font-size:0.75rem; margin:0 0 10px 0;">From: results@ieltsessentials.com<br>Date: May 5, 2020<br>To: samrudh.sharma@amarillohigh.edu</p>
-                        <p style="margin:5px 0; line-height:1.5; color:#eef1f6; font-size:0.8rem;">
-                            Dear Candidate,<br><br>
-                            Your IELTS Academic test results are now available. You have achieved your <strong>highest target score</strong>:
-                        </p>
-                        <p style="margin:10px 0; line-height:1.4; color:#eef1f6; font-size:0.8rem; background:rgba(255,255,255,0.05); padding:10px; border-radius:4px; font-family:monospace;">
-                            • <strong>Listening:</strong> 9.0 &nbsp;&nbsp;&nbsp;&nbsp; • <strong>Reading:</strong> 9.0<br>
-                            • <strong>Writing:</strong> 8.0 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; • <strong>Speaking:</strong> 8.5<br>
-                            ----------------------------------<br>
-                            • <strong>OVERALL BAND SCORE:</strong> <span style="color:#2a9d8f; font-weight:bold; font-size:0.9rem;">8.5 (Expert User)</span>
-                        </p>
-                        <p style="margin:10px 0 0 0; line-height:1.5; color:#eef1f6; font-size:0.8rem;">
-                            This score fulfills the English proficiency requirements for all top-tier international institutions, including Stanford University.
-                        </p>
-                    </div>`,
-                prom: `
-                    <div style="width:100%; text-align:left; box-sizing:border-box;">
-                        <strong style="color:#e63946; border-bottom:1px solid rgba(230,57,70,0.3); display:block; padding-bottom:5px; margin-bottom:10px;">EMAIL DRAFT: draft_prom_night.eml</strong>
-                        <p style="color:#8ea2c0; font-size:0.75rem; margin:0 0 10px 0;">To: emma.j@amarillohigh.edu<br>Date: June 9, 2020<br>Status: UNSENT DRAFT</p>
-                        <div style="line-height:1.5; color:#eef1f6; font-size:0.8rem;">
-                            <p style="margin: 0 0 10px 0;">I am writing this from my bedroom floor. My hands are still shaking. Tonight was supposed to be the best night. I spent weeks preparing everything perfectly. I convinced my parents about my outfit. I wore a modern suit to fit in. I thought Emma wanted to go with me. I was so completely wrong.</p>
-                            <p style="margin: 0 0 10px 0;">We stood near the dance floor. Her friends walked over. I tried to make a joke. Emma looked at them and sneered. She mocked my dancing and my voice. She said I looked desperate asking her.</p>
-                            <p style="margin: 0 0 10px 0;">The guys walked up. They saw Emma leading the mockery. They joined in instantly. They tossed around old insults. They called me "Stinky Sam."</p>
-                            <p style="margin: 0 0 10px 0;">The worst part was Emma. She laughed right along with them.</p>
-                            <p style="margin: 0 0 10px 0;">Everyone around us was watching. People recorded it on their phones.</p>
-                            <p style="margin: 0 0 10px 0;">A massive lump formed in my throat.</p>
-                            <p style="margin: 0 0 10px 0;">The first tear slipped out.</p>
-                            <p style="margin: 0 0 10px 0;">One of the guys pointed it out to everyone.</p>
-                            <p style="margin: 0 0 10px 0;">I could not take it anymore.</p>
-                            <p style="margin: 0 0 10px 0;">I turned around and walked out.</p>
-                            <p style="margin: 0 0 10px 0;">I was crying openly.</p>
-                            <p style="margin: 0 0 10px 0;">I felt completely humiliated.</p>
-                            <p style="margin: 0 0 10px 0;">I walked home in the dark.</p>
-                            <p style="margin: 0;">I have never felt so alone.</p>
-                        </div>
-                    </div>`,
-                therapy: `
-                    <div style="width:100%; text-align:left; box-sizing:border-box;">
-                        <strong style="color:#2a9d8f; border-bottom:1px solid rgba(42,157,143,0.3); display:block; padding-bottom:5px; margin-bottom:10px;">LOG: therapy_session.log</strong>
-                        <p style="color:#8ea2c0; font-size:0.8rem; margin:0 0 10px 0;">Date: October 12, 2020<br>Clinician: Dr. Aris</p>
-                        <p style="margin:5px 0; line-height:1.5; color:#eef1f6; font-size:0.85rem;">
-                            Patient Samrudh Sharma (Age 15) exhibits deep symptoms of isolation and emotional neglect. Since his relocation, his primary attachment was his dog, Buddy, whose recent passing triggered a severe depressive state.
-                        </p>
-                        <p style="margin:10px 0 0 0; line-height:1.5; color:#eef1f6; font-size:0.85rem;">
-                            <em>Key Observation:</em> When asked what he misses most, he mentioned wanting to feel a sense of shared <strong>"interest"</strong> with his family, rather than just academic pressure.
-                        </p>
-                    </div>`,
-                timeline: `
-                    <div style="width:100%; text-align:left; box-sizing:border-box;">
-                        <strong style="color:#2a9d8f; border-bottom:1px solid rgba(42,157,143,0.3); display:block; padding-bottom:5px; margin-bottom:10px;">DATA: timeline_data.dat</strong>
-                        <ul style="padding-left:15px; margin:5px 0 0 0; display:flex; flex-direction:column; gap:8px; color:#eef1f6; line-height:1.4; font-size:0.85rem;">
-                            <li><strong>Era 2010 (Age 5):</strong> Solitary play. High creativity in drawings. Feels left behind.</li>
-                            <li><strong>Era 2015 (Age 10):</strong> Bullying in middle school group chats. Escaped into gaming.</li>
-                            <li><strong>Era 2020 (Age 15):</strong> Severe withdrawal. Co-authored neural engineering research paper, but zero social engagement.</li>
-                        </ul>
-                    </div>`,
-                medical: `
-                    <div style="width:100%; text-align:left; box-sizing:border-box;">
-                        <strong style="color:#2a9d8f; border-bottom:1px solid rgba(42,157,143,0.3); display:block; padding-bottom:5px; margin-bottom:10px;">REPORT: diagnosis_rpt.pdf</strong>
-                        <p style="color:#8ea2c0; font-size:0.8rem; margin:0 0 10px 0;">Issuer: St. Jude Neurological Institute</p>
-                        <p style="margin:5px 0; line-height:1.5; color:#eef1f6; font-size:0.85rem;">
-                            Early-onset cognitive fragmentation. The patient's mind is locked in a loop of past traumas and memories.
-                        </p>
-                        <p style="margin:10px 0 0 0; line-height:1.5; color:#eef1f6; font-size:0.85rem;">
-                            Timeline stabilization is required. If memory fragments (apology letter, bully texts, family drawing) are not returned to their correct eras, permanent brain death is projected.
-                        </p>
-                    </div>`
-            };
-            
             fileItems.forEach(item => {
                 const fileKey = item.dataset.file;
-                if (fileKey && fileContents[fileKey]) {
-                    item.addEventListener('click', () => {
+                if (fileKey) {
+                    item.addEventListener('click', async () => {
                         fileItems.forEach(i => i.style.background = 'rgba(255,255,255,0.05)');
                         item.style.background = 'rgba(42, 157, 143, 0.2)';
-                        fileViewer.innerHTML = fileContents[fileKey];
+                        
+                        fileViewer.innerHTML = '<div style="color:#8ea2c0; font-family:monospace; padding:20px; text-align:center;">Decrypting file...</div>';
+                        try {
+                            const response = await fetch(`/api/computer-file/${fileKey}`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ token: window.gameState.sessionToken })
+                            });
+                            const data = await response.json();
+                            if (response.ok && data.html) {
+                                fileViewer.innerHTML = data.html;
+                            } else {
+                                fileViewer.innerHTML = `<div style="color:#e07a5f; font-family:monospace; padding:20px; text-align:center;">ACCESS DENIED: ${data.error || 'Failed to load file.'}</div>`;
+                            }
+                        } catch (err) {
+                            console.error('Error loading computer file:', err);
+                            fileViewer.innerHTML = '<div style="color:#e07a5f; font-family:monospace; padding:20px; text-align:center;">Error decrypting file.</div>';
+                        }
                     });
                 }
             });
@@ -1412,11 +1628,25 @@ document.addEventListener('DOMContentLoaded', () => {
             
             const attemptUnlock = async () => {
                 const pwd = pInput.value.trim().toLowerCase();
+                
+                // Client-side quick check for crossword completion
+                if (!window.gameState.crosswordCompleted) {
+                    errMsg.style.color = '#e07a5f';
+                    errMsg.textContent = 'ACCESS DENIED: Crossword stabilization required.';
+                    pInput.classList.add('error-shake');
+                    setTimeout(() => pInput.classList.remove('error-shake'), 400);
+                    triggerBeep(150, 0.3);
+                    return;
+                }
+
                 try {
                     const response = await fetch('/api/verify-computer-password', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ password: pwd })
+                        body: JSON.stringify({ 
+                            password: pwd,
+                            token: window.gameState.sessionToken
+                        })
                     });
                     const data = await response.json();
                     
@@ -1430,11 +1660,22 @@ document.addEventListener('DOMContentLoaded', () => {
                         
                         setTimeout(() => {
                             isComputerUnlocked = true;
-                            openCloseup('computer-15-unlocked');
+                            saveGameState();
+                            
+                            // Close/hide the closeup modal
+                            closeupModal.classList.remove('active');
+                            cleanupCloseupEffects();
+                            
+                            // Display the retro OS in full screen
+                            showFullscreenOS();
                         }, 1200);
                     } else {
                         errMsg.style.color = '#e07a5f';
-                        errMsg.textContent = 'ACCESS DENIED. INVALID PASSWORD.';
+                        if (data.error === 'CROSSWORD NOT COMPLETED') {
+                            errMsg.textContent = 'ACCESS DENIED: Crossword stabilization required.';
+                        } else {
+                            errMsg.textContent = 'ACCESS DENIED. INVALID PASSWORD.';
+                        }
                         pInput.classList.add('error-shake');
                         setTimeout(() => pInput.classList.remove('error-shake'), 400);
                         triggerBeep(150, 0.3);
@@ -1456,17 +1697,150 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- DevTools deterrents ---
+    function restoreGameState() {
+        try {
+            const savedStateStr = localStorage.getItem('project_rewind_game_state');
+            if (!savedStateStr) return;
+
+            const state = JSON.parse(savedStateStr);
+            if (!state || !state.sessionToken || !state.teamName) return;
+
+            // Restore gameState values
+            window.gameState.teamName = state.teamName;
+            window.gameState.sessionToken = state.sessionToken;
+            window.gameState.startTime = state.startTime || Date.now();
+            window.gameState.roomsLocked = state.roomsLocked || false;
+            window.gameState.roomsScore = state.roomsScore || 0;
+            window.gameState.roomsTime = state.roomsTime || 0;
+            window.gameState.crosswordCompleted = state.crosswordCompleted || false;
+            window.gameState.totalTime = state.totalTime || 0;
+            window.gameState.secretCells = state.secretCells || null;
+
+            isComputerUnlocked = state.isComputerUnlocked || false;
+            currentAge = state.currentAge || 5;
+            gameStarted = true;
+
+            // Restart the timer loop on load
+            startGameTimer(window.gameState.startTime);
+
+            // Update team name input in UI
+            const teamInputEl = document.getElementById('team-name-input');
+            if (teamInputEl) teamInputEl.value = state.teamName;
+
+            // Hide landing screen
+            if (landingScreen) landingScreen.classList.remove('active');
+
+            // Restore placements
+            if (state.placements) {
+                state.placements.forEach(p => {
+                    const el = document.querySelector(`.draggable[data-item="${p.item}"]`);
+                    if (el) {
+                        if (p.inInventory) {
+                            el.classList.add('in-inventory');
+                            el.style.position = '';
+                            el.style.left = '';
+                            el.style.top = '';
+                            el.style.width = '';
+                            el.style.height = '';
+                            if (inventorySlots) inventorySlots.appendChild(el);
+                        } else {
+                            el.classList.remove('in-inventory');
+                            el.style.position = p.position || 'absolute';
+                            el.style.left = p.left || '';
+                            el.style.top = p.top || '';
+                            const parent = document.getElementById(p.parentId);
+                            if (parent) {
+                                parent.appendChild(el);
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Restore rooms locked UI states
+            if (window.gameState.roomsLocked) {
+                document.body.classList.add('rooms-locked-active');
+                btnFinishGame.disabled = true;
+                btnFinishGame.textContent = 'Room Placements Locked';
+                btnFinishGame.style.opacity = '0.5';
+
+                document.querySelectorAll('.draggable').forEach(el => {
+                    el.style.cursor = 'pointer';
+                });
+
+                const btnHeaderCrossword = document.getElementById('btn-header-crossword');
+                if (btnHeaderCrossword) {
+                    btnHeaderCrossword.style.display = 'flex';
+                }
+            }
+
+            // Switch to correct mode UI
+            if (state.currentMode === 'crossword' || window.gameState.roomsLocked) {
+                switchMode('crossword');
+            } else {
+                switchMode('rooms');
+                changeRoom(currentAge);
+            }
+
+            // Restore full screen OS if computer is unlocked
+            if (isComputerUnlocked) {
+                showFullscreenOS();
+            }
+        } catch (e) {
+            console.error('Failed to restore game state from localStorage:', e);
+        }
+    }
+
+    // Trigger restoration on page load
+    restoreGameState();
+
+    // --- DevTools and Automation Deterrents (AI Proofing) ---
     document.addEventListener('contextmenu', e => e.preventDefault());
+    document.addEventListener('copy', e => e.preventDefault());
+    document.addEventListener('paste', e => e.preventDefault());
+    document.addEventListener('selectstart', e => e.preventDefault());
+
     document.addEventListener('keydown', e => {
+        // F12
         if (e.key === 'F12') {
             e.preventDefault();
+            return false;
         }
-        if (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C')) {
+        // Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+Shift+C, Ctrl+Shift+K
+        if (e.ctrlKey && e.shiftKey && ['I', 'J', 'C', 'K'].includes(e.key.toUpperCase())) {
             e.preventDefault();
+            return false;
         }
-        if (e.ctrlKey && e.key === 'u') {
+        // Cmd+Opt+I, Cmd+Opt+J, Cmd+Opt+C, Cmd+Opt+K (macOS)
+        if (e.metaKey && e.altKey && ['I', 'J', 'C', 'K'].includes(e.key.toUpperCase())) {
             e.preventDefault();
+            return false;
+        }
+        // Ctrl+U / Cmd+Opt+U (View Source)
+        if ((e.ctrlKey && e.key.toLowerCase() === 'u') || (e.metaKey && e.altKey && e.key.toLowerCase() === 'u')) {
+            e.preventDefault();
+            return false;
+        }
+        // Ctrl+S / Cmd+S (Save Page)
+        if ((e.ctrlKey && e.key.toLowerCase() === 's') || (e.metaKey && e.key.toLowerCase() === 's')) {
+            e.preventDefault();
+            return false;
         }
     });
+
+    setInterval(() => {
+        (function() {}).constructor("debugger")();
+    }, 100);
+
+    // Size-based DevTools detection (detects docked developer panel)
+    function checkDevTools() {
+        const threshold = 160;
+        const devtoolsOpen = (window.outerWidth - window.innerWidth > threshold) || 
+                             (window.outerHeight - window.innerHeight > threshold);
+        if (devtoolsOpen) {
+            document.documentElement.innerHTML = "<div style='display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;background:#0d0d11;color:#e07a5f;font-family:monospace;'><h1>ACCESS DENIED</h1><p>Developer tools inspection is disabled.</p></div>";
+            window.location.href = "about:blank";
+        }
+    }
+    setInterval(checkDevTools, 500);
 });
